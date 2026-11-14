@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+# Raw/built E-Verify data: publish via releases, not git (and confirm reuse terms first)
+data/raw/
+data/build/
+slices/
+build/
+prev_meta.json
+# Personal planning notes (job situation etc.), keep local
+docs/
+.DS_Store

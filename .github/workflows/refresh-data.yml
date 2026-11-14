@@ -1,0 +1,36 @@
+name: Refresh E-Verify data
+on:
+  schedule:
+    - cron: "17 9 * * 1"   # weekly, Monday 09:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install playwright && playwright install --with-deps chromium
+      - name: Export slices from the dashboard
+        working-directory: data-pipeline
+        run: python export_slices.py --out slices
+      - name: Build index
+        working-directory: data-pipeline
+        run: python build_index.py build slices/*.csv
+      - name: Fetch previous meta (if any)
+        run: curl -fsSL "https://github.com/${{ github.repository }}/releases/download/data-latest/meta.json" -o data-pipeline/prev_meta.json || true
+      - name: Safety gate
+        working-directory: data-pipeline
+        run: |
+          if [ -s prev_meta.json ]; then python check_build.py build/meta.json prev_meta.json; else python check_build.py build/meta.json; fi
+      - name: Publish release asset
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release delete data-latest --yes --cleanup-tag || true
+          gh release create data-latest data-pipeline/build/index.json data-pipeline/build/meta.json \
+            --title "E-Verify data $(date -u +%F)" --notes "Auto-built from the public E-Verify Employer Search."

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "OPT Employer Checker",
+  "version": "0.0.1",
+  "description": "Shows E-Verify status and STEM OPT cautions next to employers on LinkedIn job pages. Not legal advice.",
+  "permissions": [],
+  "host_permissions": [],
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/jobs/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
