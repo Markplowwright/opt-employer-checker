@@ -43,7 +43,7 @@ class Driver:
         return self.page.frame_locator(SEL["frame"]).first
 
     def reset(self):
-        self.page.goto(URL, wait_until="networkidle")
+        self.page.goto(URL, wait_until="domcontentloaded", timeout=120000)
         self.page.wait_for_timeout(8000)  # Tableau is slow to render
 
     def set_last_years(self, years: int = 30):
@@ -104,8 +104,15 @@ def main():
         browser = p.chromium.launch(headless=not args.headed)
         page = browser.new_page(viewport={"width": 1470, "height": 900})
         drv = Driver(page, out)
-        results = plan_exports(drv.export)
-        browser.close()
+        try:
+            results = plan_exports(drv.export)
+        except Exception:
+            # Leave evidence for debugging selectors: screenshot + page HTML.
+            page.screenshot(path=str(out / "debug.png"), full_page=True)
+            (out / "debug.html").write_text(page.content(), encoding="utf-8")
+            raise
+        finally:
+            browser.close()
     print(f"exported {len(results)} slices to {out}/")
     return 0
 

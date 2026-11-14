@@ -19,6 +19,13 @@ jobs:
       - name: Export slices from the dashboard
         working-directory: data-pipeline
         run: python export_slices.py --out slices
+      - name: Upload debug files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-debug
+          path: data-pipeline/slices/
+          if-no-files-found: ignore
       - name: Build index
         working-directory: data-pipeline
         run: python build_index.py build slices/*.csv
