@@ -91,6 +91,24 @@ class Driver:
         return str(path)
 
 
+def dump_frames(page):
+    """Print what the page and its frames contain so a CI log is enough to fix selectors."""
+    print("=== DEBUG: frames ===")
+    for fr in page.frames:
+        print("FRAME url:", fr.url[:200])
+        try:
+            txt = fr.inner_text("body", timeout=5000)
+            print("  text:", " | ".join(txt.split("\n")[:60])[:1500])
+            info = fr.evaluate(
+                """() => [...document.querySelectorAll('[role=combobox],[role=radio],[role=checkbox],[class*=tabComboBox],[class*=FIComboBox],[data-tb-test-id],button,input')].slice(0,80).map(e=>[e.tagName,e.getAttribute('role'),(e.className||'').toString().slice(0,60),e.getAttribute('data-tb-test-id'),(e.getAttribute('aria-label')||e.innerText||e.value||'').toString().slice(0,40)].join(' ~ '))"""
+            )
+            for line in info:
+                print("   el:", line)
+        except Exception as e:  # frames can be cross-origin or empty
+            print("  (could not read frame):", type(e).__name__)
+    print("=== END DEBUG ===")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="slices")
@@ -108,6 +126,7 @@ def main():
             results = plan_exports(drv.export)
         except Exception:
             # Leave evidence for debugging selectors: screenshot + page HTML.
+            dump_frames(page)
             page.screenshot(path=str(out / "debug.png"), full_page=True)
             (out / "debug.html").write_text(page.content(), encoding="utf-8")
             raise
