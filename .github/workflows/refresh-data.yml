@@ -2,7 +2,13 @@ name: Refresh E-Verify data
 on:
   schedule:
     - cron: "17 9 * * 1"   # weekly, Monday 09:17 UTC
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "probe = print dashboard controls only; full = export everything"
+        default: "full"
+        type: choice
+        options: [full, probe]
 
 permissions:
   contents: write
@@ -18,7 +24,7 @@ jobs:
       - run: pip install playwright && playwright install --with-deps chromium
       - name: Export slices from the dashboard
         working-directory: data-pipeline
-        run: python export_slices.py --out slices
+        run: python export_slices.py --out slices ${{ inputs.mode == 'probe' && '--probe' || '' }}
       - name: Upload debug files
         if: always()
         uses: actions/upload-artifact@v4
@@ -27,15 +33,19 @@ jobs:
           path: data-pipeline/slices/
           if-no-files-found: ignore
       - name: Build index
+        if: ${{ inputs.mode != 'probe' }}
         working-directory: data-pipeline
         run: python build_index.py build slices/*.csv
       - name: Fetch previous meta (if any)
+        if: ${{ inputs.mode != 'probe' }}
         run: curl -fsSL "https://github.com/${{ github.repository }}/releases/download/data-latest/meta.json" -o data-pipeline/prev_meta.json || true
       - name: Safety gate
+        if: ${{ inputs.mode != 'probe' }}
         working-directory: data-pipeline
         run: |
           if [ -s prev_meta.json ]; then python check_build.py build/meta.json prev_meta.json; else python check_build.py build/meta.json; fi
       - name: Publish release asset
+        if: ${{ inputs.mode != 'probe' }}
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           gh release delete data-latest --yes --cleanup-tag || true
