@@ -1,13 +1,19 @@
 {
   "manifest_version": 3,
   "name": "OPT Employer Checker",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Shows E-Verify and H-1B facts next to employers on job pages. Unofficial; not legal advice.",
   "permissions": [],
   "host_permissions": [
-    "https://github.com/Markplowwright/opt-employer-checker/releases/download/*",
-    "https://objects.githubusercontent.com/*"
+    "https://github.com/*",
+    "https://objects.githubusercontent.com/*",
+    "https://release-assets.githubusercontent.com/*"
   ],
-  "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_title": "OPT Employer Checker: data download test" }
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "OPT Employer Checker: data download test"
+  }
 }
