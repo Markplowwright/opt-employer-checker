@@ -1,15 +1,13 @@
 {
   "manifest_version": 3,
   "name": "OPT Employer Checker",
-  "version": "0.0.1",
-  "description": "Shows E-Verify status and STEM OPT cautions next to employers on LinkedIn job pages. Not legal advice.",
+  "version": "0.0.2",
+  "description": "Shows E-Verify and H-1B facts next to employers on job pages. Unofficial; not legal advice.",
   "permissions": [],
-  "host_permissions": [],
-  "content_scripts": [
-    {
-      "matches": ["https://www.linkedin.com/jobs/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  "host_permissions": [
+    "https://github.com/Markplowwright/opt-employer-checker/releases/download/*",
+    "https://objects.githubusercontent.com/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "OPT Employer Checker: data download test" }
 }
