@@ -1,0 +1,44 @@
+name: Refresh H-1B data
+on:
+  schedule:
+    - cron: "23 9 1 * *"   # monthly; USCIS updates quarterly
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Download USCIS yearly files and build summary
+        working-directory: data-pipeline
+        run: python fetch_h1b.py h1b_out
+      - name: Show which years were fetched
+        run: cat data-pipeline/h1b_out/h1b_meta.json
+      - name: Upload raw files and meta (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h1b-debug
+          path: data-pipeline/h1b_out/
+          if-no-files-found: ignore
+      - name: Safety gate (need most years, never publish a thin build)
+        run: |
+          python - <<'PY'
+          import json, sys
+          m = json.load(open("data-pipeline/h1b_out/h1b_meta.json"))
+          ok = len(m["years_fetched"]) >= 10 and m["name_keys"] >= 50000
+          print("years fetched:", m["years_fetched"], "missing:", m["years_missing"])
+          sys.exit(0 if ok else 1)
+          PY
+      - name: Publish release asset
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release delete h1b-latest --yes --cleanup-tag || true
+          gh release create h1b-latest data-pipeline/h1b_out/h1b.json data-pipeline/h1b_out/h1b_meta.json \
+            --title "H-1B data $(date -u +%F)" --notes "Auto-built from USCIS H-1B Employer Data Hub yearly files. Petition counts only; not a promise of sponsorship."
