@@ -8,7 +8,18 @@ document.getElementById("go").onclick = async () => {
   log.textContent = "";
   document.getElementById("res").innerHTML = "";
   try {
-    const meta = await (await fetch(BASE + "meta.json")).json();
+    say("step 1: fetching meta.json from " + BASE);
+    let metaResp;
+    try {
+      metaResp = await fetch(BASE + "meta.json");
+    } catch (e) {
+      say(`FAILED at step 1 (network/CORS): ${e.name}: ${e.message}`);
+      say("Hints: check chrome://extensions > OPT Employer Checker > Details > Site access; pause any ad blocker (AdGuard, uBlock) and retry; open the meta.json URL in a new tab to see if it loads.");
+      say("Final URL tried: " + BASE + "meta.json");
+      return;
+    }
+    say(`step 1 OK: HTTP ${metaResp.status}, final URL host ${new URL(metaResp.url).host}`);
+    const meta = await metaResp.json();
     say(`meta: ${meta.records_unique.toLocaleString()} records, data date ${meta.data_date}, coverage ${meta.coverage_pct}%`);
     let last = 0;
     const { data, stats } = await loadGzJson(BASE + "index.json.gz", {
