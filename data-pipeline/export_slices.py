@@ -49,6 +49,22 @@ DUMP_JS = """() => [...document.querySelectorAll('*')]
   .slice(0, 400).map(r => r.join(' ~ '))"""
 
 
+MARK_JS = "() => document.querySelectorAll('*').forEach(e => e.setAttribute('data-seen', '1'))"
+NEW_JS = """() => [...document.querySelectorAll('*:not([data-seen])')]
+  .filter(e => e.offsetParent !== null || e.getBoundingClientRect().width > 0)
+  .map(e => [e.tagName, e.getAttribute('role'), (e.className||'').toString().slice(0,60),
+             e.getAttribute('data-tb-test-id'), (e.getAttribute('aria-label')||e.innerText||e.value||'').toString().trim().replace(/\\s+/g,' ').slice(0,50)])
+  .slice(0, 300).map(r => r.join(' ~ '))"""
+
+
+def dump_new(page, title: str):
+    """Print only elements that appeared since the last mark_seen (i.e. the open popup)."""
+    print(f"=== DEBUG: NEW ELEMENTS: {title} ===")
+    for line in page.evaluate(NEW_JS):
+        print("   new:", line)
+    print("=== END DEBUG ===")
+
+
 def dump(page, title: str):
     print(f"=== DEBUG: {title} ===")
     print("url:", page.url.split("?")[0])
@@ -117,14 +133,23 @@ class Driver:
     def probe(self):
         """Print the contents of the date popup and the state dropdown."""
         self.reset()
-        dump(self.page, "page loaded")
+        self.page.evaluate(MARK_JS)
         self.open_date()
-        dump(self.page, "date popup open")
+        dump_new(self.page, "date popup")
+        # reopen/close cleanly, then look at the state dropdown the same way
         self.page.keyboard.press("Escape")
         self.page.wait_for_timeout(1000)
+        self.page.evaluate(MARK_JS)
         self.page.locator(SEL["combo"]).nth(1).click()
         self.page.wait_for_timeout(2000)
-        dump(self.page, "state dropdown open")
+        dump_new(self.page, "state dropdown")
+        # also show the Download -> Crosstab dialog
+        self.page.keyboard.press("Escape")
+        self.page.wait_for_timeout(1000)
+        self.page.evaluate(MARK_JS)
+        self.page.locator(SEL["download_button"]).first.click()
+        self.page.wait_for_timeout(1500)
+        dump_new(self.page, "download menu")
 
 
 def main():
