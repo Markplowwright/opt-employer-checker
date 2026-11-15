@@ -101,7 +101,7 @@ def main(argv=None):
     os.makedirs(a.out, exist_ok=True)
     raw_dir = a.from_dir or os.path.join(a.out, "raw")
     os.makedirs(raw_dir, exist_ok=True)
-    this_fy = datetime.date.today().year + (1 if datetime.date.today().month >= 10 else 0)
+    this_fy = datetime.date.today().year  # FY(N+1) starts in Oct N but has no data yet
     records, got, missing, errors = [], [], [], {}
     for fy in range(FIRST_FY, this_fy + 1):
         path = os.path.join(raw_dir, f"h1b_datahubexport-{fy}.csv")

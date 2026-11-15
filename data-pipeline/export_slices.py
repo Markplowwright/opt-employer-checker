@@ -130,12 +130,56 @@ class Driver:
         dl.value.save_as(path)
         return str(path)
 
+    def print_popup_text(self, title: str):
+        """Print the full visible text of any open popup (the dump above cuts lines at 50 chars)."""
+        try:
+            texts = self.page.evaluate("() => [...document.querySelectorAll('.dijitPopup, [role=dialog]')].map(e => e.innerText.replace(/\\s+/g,' | '))")
+            print(f"=== DEBUG: {title} ===")
+            for t in texts:
+                print("   popup:", t[:1500])
+            print("=== END DEBUG ===")
+        except Exception as e:
+            print("(could not read popup):", type(e).__name__, str(e)[:200])
+
+    def probe_previous_year(self):
+        """Test whether one past year can be selected, and whether its crosstab export succeeds."""
+        try:
+            self.page.get_by_text("Previous year", exact=True).first.click()
+            self.page.wait_for_timeout(15000)
+            self.open_date()
+            self.print_popup_text("date popup after clicking Previous year")
+            self.page.keyboard.press("Escape")
+            self.page.wait_for_timeout(1000)
+            shown = self.page.evaluate("() => (document.body.innerText.match(/[0-9,]+ (records|rows|results)[^\\n]*/i)||[''])[0]")
+            print("records text on page:", shown)
+            self.page.locator(SEL["download_button"]).first.click()
+            self.page.locator(SEL["crosstab_item"]).first.click()
+            self.page.wait_for_timeout(1500)
+            self.print_popup_text("crosstab dialog")
+            self.page.locator(SEL["csv_radio"]).first.click()
+            with self.page.expect_download(timeout=120000) as dl:
+                self.page.locator(SEL["download_confirm"]).first.click()
+                self.page.wait_for_timeout(8000)
+                if self.page.locator(SEL["too_large"]).count():
+                    print("PREVIOUS YEAR EXPORT: TOO LARGE")
+                    raise TooLarge
+            path = self.out / "probe_previous_year.csv"
+            dl.value.save_as(path)
+            print("PREVIOUS YEAR EXPORT OK:", path.stat().st_size, "bytes")
+        except Exception as e:
+            print("probe_previous_year failed:", type(e).__name__, str(e)[:300])
+        finally:
+            self.reset()
+            self.page.evaluate(MARK_JS)
+
     def probe(self):
         """Print the contents of the date popup and the state dropdown."""
         self.reset()
         self.page.evaluate(MARK_JS)
         self.open_date()
         dump_new(self.page, "date popup")
+        self.print_popup_text("date popup FULL TEXT")
+        self.probe_previous_year()
         # reopen/close cleanly, then look at the state dropdown the same way
         self.page.keyboard.press("Escape")
         self.page.wait_for_timeout(1000)
