@@ -9,3 +9,5 @@ prev_meta.json
 # Personal planning notes (job situation etc.), keep local
 docs/
 .DS_Store
+
+h1b_out/
