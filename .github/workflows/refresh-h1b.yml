@@ -41,4 +41,4 @@ jobs:
         run: |
           gh release delete h1b-latest --yes --cleanup-tag || true
           gh release create h1b-latest data-pipeline/h1b_out/h1b.json data-pipeline/h1b_out/h1b_meta.json \
-            --title "H-1B data $(date -u +%F)" --notes "Auto-built from USCIS H-1B Employer Data Hub yearly files. Petition counts only; not a promise of sponsorship."
+            --title "H-1B data $(date -u +%F)" --notes "Built from USCIS H-1B Employer Data Hub files: FY2009-2023 downloaded, FY2024-2026 hand-exported (FY2026 partial). Petition counts only; not a promise of sponsorship. Unofficial; not affiliated with USCIS or DHS."
