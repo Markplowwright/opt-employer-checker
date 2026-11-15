@@ -21,6 +21,7 @@ Tableau exports arrive as UTF-16 tab-separated text; build_index.py reads that f
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -101,6 +102,21 @@ class Driver:
         box.press("Enter")
         self.page.wait_for_timeout(20000)
 
+    def crosstab_download(self, path: Path):
+        """Download -> Crosstab -> sheet 'Employer List' -> CSV -> Download, all inside the dialog."""
+        self.page.locator(SEL["download_button"]).first.click()
+        self.page.locator(SEL["crosstab_item"]).first.click()
+        self.page.wait_for_timeout(1500)
+        dialog = self.page.locator("[role=dialog]").filter(has_text="Select a sheet")
+        dialog.get_by_text("Employer List", exact=True).first.click()
+        dialog.get_by_text("CSV", exact=True).first.click()
+        with self.page.expect_download(timeout=120000) as dl:
+            dialog.get_by_role("button", name="Download").last.click()
+            self.page.wait_for_timeout(8000)
+            if self.page.locator(SEL["too_large"]).count():
+                raise TooLarge
+        dl.value.save_as(path)
+
     def apply_filters(self, filters: dict):
         if "state" in filters:
             self.page.locator(SEL["combo"]).nth(1).click()
@@ -116,18 +132,10 @@ class Driver:
         self.reset()
         self.set_last_years(30)
         self.apply_filters(filters)
-        self.page.locator(SEL["download_button"]).first.click()
-        self.page.locator(SEL["crosstab_item"]).first.click()
-        self.page.locator(SEL["csv_radio"]).first.click()
-        with self.page.expect_download(timeout=120000) as dl:
-            self.page.locator(SEL["download_confirm"]).first.click()
-            self.page.wait_for_timeout(8000)
-            if self.page.locator(SEL["too_large"]).count():
-                raise TooLarge
         self.n += 1
         label = "-".join(f"{k}={v}" for k, v in sorted(filters.items())) or "all"
         path = self.out / f"{self.n:03d}_{label}.csv"
-        dl.value.save_as(path)
+        self.crosstab_download(path)
         return str(path)
 
     def print_popup_text(self, title: str):
@@ -141,8 +149,19 @@ class Driver:
         except Exception as e:
             print("(could not read popup):", type(e).__name__, str(e)[:200])
 
+    def _export_probe(self, name: str):
+        path = self.out / f"{name}.csv"
+        try:
+            self.crosstab_download(path)
+            rows = max(0, sum(1 for _ in open(path, "rb")) - 1)
+            print(f"{name.upper()} EXPORT OK: {path.stat().st_size} bytes, about {rows} lines")
+        except TooLarge:
+            print(f"{name.upper()} EXPORT: TOO LARGE")
+        except Exception as e:
+            print(f"{name.upper()} EXPORT failed:", type(e).__name__, str(e)[:300])
+
     def probe_previous_year(self):
-        """Test whether one past year can be selected, and whether its crosstab export succeeds."""
+        """Test exporting one past year via the 'Previous year' option."""
         try:
             self.page.get_by_text("Previous year", exact=True).first.click()
             self.page.wait_for_timeout(15000)
@@ -150,24 +169,41 @@ class Driver:
             self.print_popup_text("date popup after clicking Previous year")
             self.page.keyboard.press("Escape")
             self.page.wait_for_timeout(1000)
-            shown = self.page.evaluate("() => (document.body.innerText.match(/[0-9,]+ (records|rows|results)[^\\n]*/i)||[''])[0]")
-            print("records text on page:", shown)
-            self.page.locator(SEL["download_button"]).first.click()
-            self.page.locator(SEL["crosstab_item"]).first.click()
-            self.page.wait_for_timeout(1500)
-            self.print_popup_text("crosstab dialog")
-            self.page.locator(SEL["csv_radio"]).first.click()
-            with self.page.expect_download(timeout=120000) as dl:
-                self.page.locator(SEL["download_confirm"]).first.click()
-                self.page.wait_for_timeout(8000)
-                if self.page.locator(SEL["too_large"]).count():
-                    print("PREVIOUS YEAR EXPORT: TOO LARGE")
-                    raise TooLarge
-            path = self.out / "probe_previous_year.csv"
-            dl.value.save_as(path)
-            print("PREVIOUS YEAR EXPORT OK:", path.stat().st_size, "bytes")
+            self._export_probe("probe_previous_year")
         except Exception as e:
             print("probe_previous_year failed:", type(e).__name__, str(e)[:300])
+        finally:
+            self.reset()
+            self.page.evaluate(MARK_JS)
+
+    def probe_date_range(self, year: int = 2020):
+        """Test whether the start/end date boxes in the popup can be typed into."""
+        try:
+            self.open_date()
+            info = self.page.evaluate("""() => [...document.querySelectorAll('.dijitPopup input, [role=dialog] input')]
+                .map(i => [i.type, i.value, i.readOnly, i.disabled, i.getAttribute('aria-label')||''].join(' ~ '))""")
+            print("=== DEBUG: date popup inputs (type ~ value ~ readOnly ~ disabled ~ label) ===")
+            for line in info:
+                print("   input:", line)
+            print("=== END DEBUG ===")
+            boxes = self.page.locator(".dijitPopup input[type=text]")
+            vals = [boxes.nth(i).input_value() for i in range(boxes.count())]
+            idx = [i for i, v in enumerate(vals) if re.fullmatch(r"\d+/\d+/\d{4}", v or "")]
+            if len(idx) < 2:
+                print("date range boxes not found among text inputs:", vals)
+                return
+            boxes.nth(idx[0]).fill(f"1/1/{year}")
+            boxes.nth(idx[0]).press("Tab")
+            boxes.nth(idx[1]).fill(f"12/31/{year}")
+            boxes.nth(idx[1]).press("Enter")
+            self.page.wait_for_timeout(15000)
+            self.open_date()
+            self.print_popup_text(f"date popup after typing {year}")
+            self.page.keyboard.press("Escape")
+            self.page.wait_for_timeout(1000)
+            self._export_probe(f"probe_range_{year}")
+        except Exception as e:
+            print("probe_date_range failed:", type(e).__name__, str(e)[:300])
         finally:
             self.reset()
             self.page.evaluate(MARK_JS)
@@ -180,6 +216,8 @@ class Driver:
         dump_new(self.page, "date popup")
         self.print_popup_text("date popup FULL TEXT")
         self.probe_previous_year()
+        self.probe_date_range(2020)
+        self.open_date()
         # reopen/close cleanly, then look at the state dropdown the same way
         self.page.keyboard.press("Escape")
         self.page.wait_for_timeout(1000)
