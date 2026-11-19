@@ -1,0 +1,72 @@
+name: Deploy data site (GitHub Pages)
+# Builds the hash-prefix shards from the published NDJSON index and deploys them to Pages.
+# Shards are NOT committed to git (about 100 MB raw); they only exist as the Pages artifact.
+# One-time setup: repo Settings > Pages > Source = "GitHub Actions".
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Download the published index (data-latest release)
+        run: |
+          mkdir -p build
+          base="https://github.com/${{ github.repository }}/releases/download/data-latest"
+          curl -fsSL "$base/meta.json" -o build/meta.json
+          curl -fsSL "$base/index.ndjson.gz" -o build/index.ndjson.gz
+          ls -l build
+      - name: Verify the download matches its meta
+        run: |
+          python - <<'PY'
+          import gzip, hashlib, json, sys
+          m = json.load(open("build/meta.json"))
+          if "ndjson" not in m:
+              sys.exit("data-latest has no ndjson block: upload index.ndjson.gz and the new meta.json first")
+          h = hashlib.sha256()
+          with gzip.open("build/index.ndjson.gz", "rb") as f:
+              for chunk in iter(lambda: f.read(1 << 20), b""):
+                  h.update(chunk)
+          if h.hexdigest() != m["ndjson"]["sha256"]:
+              sys.exit("sha256 mismatch: the index and meta.json are from different builds")
+          print("ok", m["data_date"], m["ndjson"]["lines"], "lines")
+          PY
+      - name: Build shards
+        working-directory: data-pipeline
+        run: python build_shards.py ../build ../_site
+      - name: Safety gate (never publish a thin site)
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          m = json.load(open("_site/meta.json"))
+          n = len(os.listdir("_site/" + m["shard_path"]))
+          ok = m["name_keys"] >= 500000 and n == m["shards"] == 4096
+          print("keys", m["name_keys"], "shard files", n)
+          sys.exit(0 if ok else 1)
+          PY
+      - name: Add the speed-test page and the lookup code it uses
+        run: |
+          cp site/index.html _site/index.html
+          mkdir -p _site/lib
+          cp extension/lib/normalize.js extension/lib/shards.js _site/lib/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+      - id: deployment
+        uses: actions/deploy-pages@v4
