@@ -39,3 +39,47 @@ def test_build_cleans_dedupes_flags_scheduled_end_and_writes_coverage():
     soon = idx["soon gone"]["recs"][0]
     assert soon["status"] == "open" and "ends" in soon and "terminated" not in soon
     assert idx["old"]["recs"][0]["terminated"] == "2012-04-01"
+
+
+def test_ndjson_is_slim_streamable_and_round_trips():
+    rows = [
+        ["11/13/2026", "Acme Corp", "Acme Foods", "Open", "No", "01/05/2020", "", "10 to 19", "NY"],
+        ["11/13/2026", "ACME CORP.", "", "Terminated", "Yes", "03/01/2010", "04/01/2012", "5 to 9", "TX"],
+        ["11/13/2026", "Old Co", "", "Terminated", "No", "03/01/2010", "04/01/2012", "10,000 and over", "Null"],
+        ["11/13/2026", "Murky LLC", "", "Open", "No", "03/01/2010", "04/01/2012", "5 to 9", "NY"],  # Open but past end date
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        a = os.path.join(d, "a.csv")
+        write_slice(a, rows)
+        out = os.path.join(d, "out")
+        build_index.main(out, [a])
+        meta = json.load(open(os.path.join(out, "meta.json")))
+        raw = gzip.open(os.path.join(out, "index.ndjson.gz")).read()
+        full = json.load(open(os.path.join(out, "index.json")))
+    lines = raw.decode("utf-8").splitlines()
+    assert meta["ndjson"]["lines"] == len(lines) == len(full) == 3
+    objs = [json.loads(x) for x in lines]            # every line is valid JSON on its own
+    assert [o["k"] for o in objs] == sorted(o["k"] for o in objs)
+    import hashlib
+    assert hashlib.sha256(raw).hexdigest() == meta["ndjson"]["sha256"]
+    acme = next(o for o in objs if o["k"] == "acme")
+    assert acme["n"] == "Acme Corp"
+    open_rec = next(r for r in acme["r"] if "t" not in r)
+    assert open_rec["e"] == "2020-01-05" and open_rec["z"] == "c" and open_rec["s"] == "NY" and open_rec["d"] == "Acme Foods"
+    closed = next(r for r in acme["r"] if "t" in r)
+    assert closed["t"] == "2012-04-01" and closed["n"] == "ACME CORP."   # name kept when it differs
+    old = next(o for o in objs if o["k"] == "old")
+    assert old["r"][0]["z"] == "j" and "s" not in old["r"][0]            # empty fields omitted
+    assert meta["ndjson"]["size_codes"]["j"] == "10,000 and over"
+    murky = next(o for o in objs if o["k"] == "murky")["r"][0]
+    assert murky["t"] == "2012-04-01" and murky["u"] == 1               # flagged unclear, not a clean "terminated"
+    assert "u" not in old["r"][0] and "u" not in closed                  # real terminations carry no flag
+
+
+def test_ndjson_gzip_is_reproducible():
+    idx = {"acme": {"n": 1, "open": 1, "staffing": [], "recs": [{"name": "Acme", "enrolled": "2020-01-05", "status": "open"}]}}
+    with tempfile.TemporaryDirectory() as d:
+        p1, p2 = os.path.join(d, "1.gz"), os.path.join(d, "2.gz")
+        build_index.write_ndjson_gz(idx, build_index.Path(p1))
+        build_index.write_ndjson_gz(idx, build_index.Path(p2))
+        assert open(p1, "rb").read() == open(p2, "rb").read()
