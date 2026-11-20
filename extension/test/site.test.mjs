@@ -8,7 +8,7 @@ const about = readFileSync(new URL("index.html", site), "utf8");
 
 test("About page keeps the fixed wording", () => {
   for (const s of ["cannot guarantee", "I-983", "Ask your DSO", "not legal advice", "Not affiliated", "federal-contract",
-                   "Company names never leave your browser", "first 3 characters of the hash", "Not found", "Couldn't check", "Questions to ask before you accept", "Coming soon", "no dates"]) {
+                   "Company names never leave your browser", "first 3 characters of the hash", "Not found", "couldn’t check", "Questions to ask before you accept", "Coming soon", "no dates"]) {
     assert.ok(about.toLowerCase().includes(s.toLowerCase()), "missing: " + s);
   }
 });
