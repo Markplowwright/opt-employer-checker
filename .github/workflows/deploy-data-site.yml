@@ -73,9 +73,9 @@ jobs:
           print("keys", m["name_keys"], "shard files", n)
           sys.exit(0 if ok else 1)
           PY
-      - name: Add the speed-test page and the lookup code it uses
+      - name: Add the About page, the speed-test page and the lookup code it uses
         run: |
-          cp site/index.html site/icon.svg site/favicon-32.png _site/
+          cp site/index.html site/speedtest.html site/icon.svg site/favicon-32.png _site/
           mkdir -p _site/lib
           cp extension/lib/normalize.js extension/lib/shards.js _site/lib/
       - uses: actions/configure-pages@v5

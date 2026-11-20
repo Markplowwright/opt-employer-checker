@@ -1,36 +1,96 @@
 <!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
-<title>OPT Employer Checker: data speed test</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPT Employer Checker: about, data and privacy</title>
+<meta name="description" content="OPT Employer Checker is a free, unofficial Chrome extension that shows E-Verify and H-1B information next to employers on LinkedIn job pages.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}pre{background:#f4f4f4;padding:1rem;overflow:auto}button{font:inherit;padding:.5rem 1rem;margin:.25rem .25rem .25rem 0}</style>
-<h1>Data speed test</h1>
-<p>Times real lookups against this site's shard files. Nothing is sent except a 3-character hash prefix. Unofficial; not legal advice.</p>
-<button id="cold">Run (cold: clears the cache first)</button>
-<button id="warm">Run again (warm)</button>
-<pre id="out">Press a button.</pre>
-<script type="module">
-import { createShardClient } from "./lib/shards.js";
-const names = ["Cognizant Technology Solutions","Infosys Limited","Steven Madden, Ltd.","Accenture LLP","Deloitte Consulting LLP","Amazon.com Services LLC","Google LLC","Microsoft Corporation","JPMorgan Chase & Co.","IBM","Capital One","Wells Fargo","Oracle America, Inc.","Tata Consultancy Services","Wipro Limited","HCL America Inc","Salesforce, Inc.","Adobe Inc.","Goldman Sachs","Bank of America","Walmart Inc","Target Corporation","Verizon","Intel Corporation","Cisco Systems, Inc."];
-const out = document.getElementById("out");
-const ms = (t) => Math.round(performance.now() - t);
-async function run(cold) {
-  out.textContent = "Running...";
-  const base = new URL("./", location.href).href;
-  if (cold) await caches.delete("shard-speedtest");
-  const cache = await caches.open("shard-speedtest");
-  const c = createShardClient({ base, cache });            // fresh in-memory state each run
-  const r = {};
-  let t = performance.now(); const one = await c.lookupName(names[0]); r.firstLookupMs = ms(t);
-  t = performance.now(); await c.lookupName(names[0]); r.repeatLookupMs = ms(t);
-  t = performance.now(); const list = await c.lookupMany(names); r.list25Ms = ms(t);
-  const vals = [...list.values()];
-  r.listFound = vals.filter((v) => v.found).length;
-  r.listErrors = vals.filter((v) => v.error).length;
-  r.stats = c.stats;
-  r.dataDate = (await c.getMeta()).data_date;
-  r.mode = cold ? "cold (empty disk cache)" : "warm (disk cache)";
-  out.textContent = JSON.stringify(r, null, 2);
-}
-cold.onclick = () => run(true); warm.onclick = () => run(false);
+<style>
+:root{--navy:#22314a;--brass:#c8a45c;--ivory:#f3ead7;--ink:#1b1f24;--muted:#5a6472;--line:#d9dde3}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#fff}
+header{background:var(--navy);color:var(--ivory);padding:2.5rem 1rem}
+.wrap{max-width:44rem;margin:0 auto;padding:0 1rem}
+.brand{display:flex;flex-direction:column;align-items:center;gap:.9rem;text-align:center}
+.brand svg{width:88px;height:88px;display:block}
+.brand h1{margin:0;font-size:1.6rem;line-height:1.1;letter-spacing:-.01em;font-weight:800}
+.brand p{margin:0;color:#b9c3d3;font-size:.9rem}
+main{padding:1.5rem 0 3rem}
+h2{font-size:1.2rem;margin:2rem 0 .4rem;letter-spacing:-.005em}
+p,li{margin:.4rem 0}
+ul{padding-left:1.25rem}
+a{color:#1d4f91}
+.note{background:#f6f1e4;border:1px solid #e4d7b5;border-radius:10px;padding:.8rem 1rem;margin:1.2rem 0}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0}
+.chip{display:inline-flex;align-items:center;height:26px;padding:0 .7rem;border-radius:13px;font-size:.8rem;font-weight:600;background:var(--ivory);color:var(--navy);border:1px solid #e0d3b3}
+.chip.b{background:var(--brass);border-color:var(--brass)}
+dl{margin:.4rem 0}
+dt{font-weight:700;margin-top:.7rem}
+dd{margin:.1rem 0 0}
+footer{border-top:1px solid var(--line);padding:1.2rem 0;color:var(--muted);font-size:.85rem}
+code{background:#f1f3f6;padding:.05rem .3rem;border-radius:4px;font-size:.9em}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OPT Employer Checker icon"><rect width="128" height="128" rx="28" fill="#22314a"/><rect x="8" y="24" width="98" height="42" rx="21" fill="#f3ead7"/><circle cx="29" cy="45" r="12.5" fill="#22314a"/><polyline points="23.2,45.5 27.5,49.8 35.0,40.5" fill="none" stroke="#f3ead7" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="50" y="39" width="42" height="12" rx="6" fill="#22314a"/><rect x="24" y="72" width="96" height="42" rx="21" fill="#c8a45c"/><rect x="44" y="84" width="56" height="12" rx="6" fill="#22314a"/></svg>
+    <div>
+      <h1>OPT Employer Checker</h1>
+      <p>Free, unofficial. Not affiliated with DHS or USCIS.</p>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  <p>A free Chrome extension that shows E-Verify and H-1B information next to employers on LinkedIn job pages, so F-1 and STEM OPT job seekers can spot problems before they accept an offer.</p>
+
+  <div class="note"><strong>Please read:</strong> this tool cannot guarantee that an employer will sign an I-983, and it is not legal advice. Your DSO is the authority. Ask your DSO.</div>
+
+  <h2>What you see on LinkedIn</h2>
+  <div class="chips"><span class="chip">E-Verify: enrolled</span><span class="chip b">H-1B 12</span></div>
+  <dl>
+    <dt>E-Verify chip</dt>
+    <dd>Says whether the employer has an enrollment on file, whether it is open or ended, and when it started. Click the chip for details.</dd>
+    <dt>H-1B chip</dt>
+    <dd>Shows how many H-1B petitions the employer filed in recent fiscal years, from the USCIS H-1B Employer Data Hub.</dd>
+    <dt>"Not found" is not a verdict</dt>
+    <dd>It only means the name was not in our data. It does not mean the employer is not enrolled. A name must match exactly after normalizing, so a similar-looking name is never shown as a match.</dd>
+    <dt>"Couldn't check"</dt>
+    <dd>Shown when the data could not be loaded, for example when you are offline. It never means "not enrolled".</dd>
+  </dl>
+
+  <h2>Data and sources</h2>
+  <ul>
+    <li>E-Verify: the public <a href="https://www.e-verify.gov/e-verify-employer-search" rel="noopener">E-Verify employer search</a> data. We cover <span id="cov">about three quarters of</span> E-Verify employers, so an employer can be missing.</li>
+    <li>H-1B: the <a href="https://www.uscis.gov/tools/reports-and-studies/h-1b-employer-data-hub" rel="noopener">USCIS H-1B Employer Data Hub</a>.</li>
+    <li>Data date: <strong id="dd">loading&hellip;</strong>. The extension always shows the data date next to what it tells you.</li>
+    <li>Some E-Verify enrollments cover only federal-contract work. An enrollment on file may not apply to the job you are applying for.</li>
+  </ul>
+
+  <h2>Privacy</h2>
+  <ul>
+    <li>The extension reads the company name shown on the LinkedIn job page you are viewing, inside your browser. It only runs on linkedin.com.</li>
+    <li>Company names never leave your browser. The name is normalized and hashed on your computer, and only the first 3 characters of the hash are used to request a data file. That file is shared by hundreds of employers, so the data site cannot tell which employer you looked at.</li>
+    <li>The data files are static files hosted on GitHub Pages. Like any website, GitHub can see your IP address and which data file was requested. We do not run a server, an account system, analytics, advertising or tracking, and we do not collect, sell or share personal data.</li>
+    <li>Downloaded data files are kept in your browser's own cache so lookups are fast. They contain public employer data only. Nothing about you or your searches is stored.</li>
+    <li>The extension asks for no browser permissions beyond reading LinkedIn pages and fetching these data files.</li>
+  </ul>
+
+  <h2>Not affiliated</h2>
+  <p>OPT Employer Checker is an independent project. It is not affiliated with, endorsed by, or sponsored by DHS, USCIS, E-Verify or LinkedIn. It is made by a student on OPT for other students.</p>
+
+  <h2>Open source</h2>
+  <p>The code and the data pipeline are public at <a href="https://github.com/Markplowwright/opt-employer-checker" rel="noopener">github.com/Markplowwright/opt-employer-checker</a>. Found a wrong result or a missing employer? <a href="https://github.com/Markplowwright/opt-employer-checker/issues" rel="noopener">Open an issue</a>.</p>
+</main>
+<footer><div class="wrap">Unofficial. Not legal advice. This can't guarantee an I-983 will be accepted. Ask your DSO.</div></footer>
+<script>
+// Reads this site's own meta.json (same origin). No third-party requests are made from this page.
+fetch("meta.json",{cache:"no-cache"}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(m){
+  if(m.data_date)document.getElementById("dd").textContent=m.data_date;
+  if(m.coverage_pct)document.getElementById("cov").textContent="about "+Math.round(m.coverage_pct)+"% of";
+}).catch(function(){document.getElementById("dd").textContent="see the extension for the current date"});
 </script>
+</body>
+</html>
