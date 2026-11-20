@@ -42,8 +42,9 @@
   function scan() {
     timer = null;
     try {
+      if (!OptReader.applies(location)) return;      // LinkedIn is a single-page app: re-check the path on every scan
       var targets = OptReader.readCards(document).map(function (c) { return { anchor: c.anchor, name: c.name, kind: "card" }; });
-      var d = OptReader.readDetail(document);
+      var d = OptReader.readDetail(document, location);
       if (d) targets.push({ anchor: d.anchor, name: d.name, kind: "detail" });
       if (!targets.length) return;
       var need = [];

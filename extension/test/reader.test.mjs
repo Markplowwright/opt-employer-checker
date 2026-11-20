@@ -26,7 +26,7 @@ test("anchor is the subtitle when present (chips go right after it)", () => {
 });
 
 test("reads the employer from the detail pane and collapses whitespace", () => {
-  const d = OptReader.readDetail(document);
+  const d = OptReader.readDetail(document, { pathname: "/jobs/collections/recommended/", search: "" });
   assert.equal(d.name, "Infosys Limited");
 });
 
@@ -44,6 +44,55 @@ test("newer layout: employer is the first non-location <p> in each job card", ()
 });
 
 test("newer layout: detail pane employer is the company link outside the cards, not 'employees' links", () => {
-  const d = OptReader.readDetail(nd);
+  const d = OptReader.readDetail(nd, { pathname: "/jobs/search-results/", search: "?currentJobId=111" });
   assert.equal(d.name, "Legora");
+});
+
+const load = (f) => parseHTML(readFileSync(new URL("./fixtures/" + f, import.meta.url), "utf8")).document;
+
+test("job tracker: 'Employer · Location' lines give the employer", () => {
+  const cards = OptReader.readCards(load("jobs-tracker.html"));
+  assert.deepEqual(cards.map((c) => c.name), ["Milliman", "Equinox"]);   // ATS suffix dropped
+});
+
+test("single job page: employer link confirmed by the page title; 'Show Premium Insights' is ignored", () => {
+  const d = OptReader.readDetail(load("job-view.html"), { pathname: "/jobs/view/4486644520/", search: "" });
+  assert.equal(d.name, "Jobot");
+  assert.equal(OptReader.titleEmployer(load("job-view.html")), "Jobot");
+});
+
+test("no title confirmation means no chip (never guess an employer)", () => {
+  const doc = load("job-view.html"); doc.title = "Something else";
+  assert.equal(OptReader.readDetail(doc, { pathname: "/jobs/view/1/", search: "" }), null);
+});
+
+test("company page Jobs tab: employer from the title, anchored to the heading", () => {
+  const d = OptReader.readDetail(load("company-jobs.html"), { pathname: "/company/legora/jobs/", search: "" });
+  assert.equal(d.name, "Legora"); assert.equal(d.anchor.tagName, "H1");
+});
+
+test("jobs home has no selected job, so no detail chip", () => {
+  assert.equal(OptReader.readDetail(load("jobs-page-new.html"), { pathname: "/jobs/", search: "" }), null);
+});
+
+test("which paths the reader runs on", () => {
+  for (const p of ["/jobs/", "/jobs", "/jobs/search-results/", "/jobs/view/1/", "/jobs/collections/recommended/", "/jobs-tracker/", "/my-items/saved-jobs/", "/company/legora/jobs/"]) assert.ok(OptReader.applies({ pathname: p }), p);
+  for (const p of ["/feed/", "/in/someone/", "/company/legora/", "/messaging/", "/"]) assert.ok(!OptReader.applies({ pathname: p }), p);
+});
+
+test("a page with nothing recognisable gives nothing, on every reader", () => {
+  const doc = parseHTML("<html><head><title>x</title></head><body><p>hello</p></body></html>").document;
+  assert.deepEqual(OptReader.readCards(doc), []);
+  assert.equal(OptReader.readDetail(doc, { pathname: "/jobs/view/1/", search: "" }), null);
+});
+
+test("jobs home: the left sidebar profile card + footer is not a job card", () => {
+  const foot = Array.from({ length: 10 }, (_, i) => "<p>Footer link " + i + "</p>").join("");
+  const { document: d } = parseHTML('<html><head><title>Jobs | LinkedIn</title></head><body><aside><div><img src="me"><p>Premium</p><p>New York City Metropolitan Area</p>' + foot + '</div></aside></body></html>');
+  assert.deepEqual(OptReader.readCards(d), []);
+});
+
+test("a 'Premium' label line is never taken as the employer", () => {
+  const { document: d } = parseHTML('<html><body><div><img src="x"><a href="/jobs/view/9/">t</a><p>Premium</p><p>Acme Corp</p><p>Austin, TX (On-site)</p></div></body></html>');
+  assert.deepEqual(OptReader.readCards(d).map((c) => c.name), ["Acme Corp"]);
 });
