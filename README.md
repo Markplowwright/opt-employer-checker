@@ -4,7 +4,7 @@ A free Chrome extension that shows **E-Verify** and **H-1B** information next to
 
 > **It cannot tell you an employer will sign an I-983.** This is not legal advice. Your DSO is the authority. Unofficial: not affiliated with DHS, USCIS, E-Verify or LinkedIn.
 
-**More on the About page:** <https://markplowwright.github.io/opt-employer-checker/> (what the chips mean, data date and sources, privacy).
+**More on the About page:** <https://markplowwright.github.io/opt-employer-checker/> (what the chips mean, data date and sources, privacy). **Why it is built this way:** [CASE-STUDY.md](CASE-STUDY.md).
 
 ![Job list and detail pane with the chips](assets/screenshots/01-list-and-detail.png)
 
@@ -63,6 +63,10 @@ The Chrome Web Store release is planned. Until then:
 - `site/` the data site's About page (published with the shards)
 - `brand/` logo files
 - `assets/screenshots/` screenshots used here and for the Store listing
+
+## License
+
+The code is [MIT licensed](LICENSE). The data comes from public U.S. government sources (E-Verify and the USCIS H-1B Employer Data Hub); it is not covered by this license.
 
 ## Status
 
