@@ -1,9 +1,19 @@
 name: Deploy data site (GitHub Pages)
 # Builds the hash-prefix shards from the published NDJSON index and deploys them to Pages.
+# Runs by hand (Run workflow) and automatically when site/ or the shared lookup code changes on main.
 # Shards are NOT committed to git (about 100 MB raw); they only exist as the Pages artifact.
 # One-time setup: repo Settings > Pages > Source = "GitHub Actions".
 on:
   workflow_dispatch:
+  # Redeploy automatically when the site pages or the lookup code the site serves change on main.
+  # A data refresh stays manual (run it by hand after uploading a new data-latest release).
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "extension/lib/normalize.js"
+      - "extension/lib/shards.js"
+      - ".github/workflows/deploy-data-site.yml"
 
 permissions:
   contents: read
