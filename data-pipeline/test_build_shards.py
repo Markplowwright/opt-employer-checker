@@ -72,3 +72,28 @@ def test_output_is_reproducible(tmp_path):
         bs.write_shards(bs.split_ndjson_gz(src), str(d), "2026-11-13", {"built": "x"})
     pa = bs.shard_prefix("zeta") + ".json"
     assert (a / "2026-11-13" / pa).read_bytes() == (b / "2026-11-13" / pa).read_bytes()
+
+
+H = {"name": "H ONLY LLC", "staffing": ["consulting"], "states": ["CA"],
+     "years": {"2025": {"ia": 5, "ca": 3, "oa": 2, "id": 1, "cd": 1, "od": 0}, "2026": {"ia": 1, "ca": 0, "oa": 0, "id": 0, "cd": 0, "od": 0}}}
+
+
+def test_merge_h1b_adds_totals_and_h1b_only_companies(tmp_path):
+    src = tmp_path / "index.ndjson.gz"
+    _ndjson(src, ROWS)
+    shards = bs.split_ndjson_gz(src)
+    h1b = {"acme": dict(H, name="ACME INC", staffing=[]), "h only": H}
+    added = bs.merge_h1b(shards, h1b)
+    assert added == 1
+    acme = shards[bs.shard_prefix("acme")]["acme"]
+    assert acme["h"] == {"2025": [10, 2], "2026": [1, 0]} and acme["n"] == "Acme Inc" and "f" not in acme
+    only = shards[bs.shard_prefix("h only")]["h only"]
+    assert only["r"] == [] and only["n"] == "H ONLY LLC" and only["f"] == ["consulting"]
+
+
+def test_write_shards_records_h1b_years(tmp_path):
+    src = tmp_path / "index.ndjson.gz"
+    _ndjson(src, ROWS)
+    meta = bs.write_shards(bs.split_ndjson_gz(src), str(tmp_path / "o"), "2026-11-13", {"built": "x"},
+                           h1b_meta={"years_fetched": [2024, 2025, 2026], "built": "b", "source": "s"})
+    assert meta["h1b_partial_fy"] == 2026 and meta["h1b_full_fy"] == 2025
