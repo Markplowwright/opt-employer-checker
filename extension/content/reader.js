@@ -16,7 +16,7 @@
   var LOCATION = /\((on-site|remote|hybrid)\)|, [A-Z]{2}\b|metropolitan area|united states$/i;
   var DOT = /^(.+?)\s+[·•]\s+(.+)$/;          // "Employer · Location" on one line (job tracker)
   var NOT_EMPLOYER = /^(premium|promoted|viewed|saved|applied|new|easy apply|actively reviewing applicants)$/i;
-  var MAX_LINES = 10;                                   // a job card is short; the sidebar profile card + footer is not
+  var MAX_LINES = 12;                                   // a job card is short; the sidebar profile card + footer is not
   var PATHS = /^\/(jobs(\/|$)|jobs-tracker|my-items\/|company\/[^/]+\/jobs)/;
 
   function clean(t) { return (t || "").replace(/\s+/g, " ").trim(); }
@@ -50,12 +50,14 @@
     return out;
   }
   function isLoc(p) { return LOCATION.test(clean(p.textContent)); }
+  function isBullet(p) { return /^[\u00b7\u2022|\-]+$/.test(clean(p.textContent)); }   // "•" separators between card fields
+  function countLines(lines) { var n = 0; for (var i = 0; i < lines.length; i++) if (!isBullet(lines[i])) n++; return n; }
   function dotEmployer(p) { var m = DOT.exec(clean(p.textContent)); return m && LOCATION.test(m[2]) ? tidy(m[1]) : ""; }
 
   function employerIn(lines) {
     var j, n;
     for (j = 0; j < lines.length; j++) { n = dotEmployer(lines[j]); if (n) return { anchor: lines[j], name: n }; }
-    for (j = 0; j < lines.length; j++) if (!isLoc(lines[j]) && !NOT_EMPLOYER.test(clean(lines[j].textContent))) return { anchor: lines[j], name: tidy(lines[j].textContent) };
+    for (j = 0; j < lines.length; j++) if (!isLoc(lines[j]) && !isBullet(lines[j]) && !NOT_EMPLOYER.test(clean(lines[j].textContent))) return { anchor: lines[j], name: tidy(lines[j].textContent) };
     return null;
   }
   function readByLocation(doc) {
@@ -70,7 +72,7 @@
         el = par; lines = pl;
         if (pl.length >= 2 || (pl.length === 1 && dotEmployer(pl[0]))) card = el;
       }
-      if (!card || seen.indexOf(card) >= 0 || lines.length > MAX_LINES) continue;
+      if (!card || seen.indexOf(card) >= 0 || countLines(lines) > MAX_LINES) continue;
       // a real card has a logo or a job link; the page header and detail pane do not (or have headings / company links)
       if (!card.querySelector("img, figure, " + JOB_LINK)) continue;
       if (card.querySelector("h1, h2, h3, a[href*='/company/']")) continue;
@@ -136,7 +138,9 @@
       while (sib && !clean(sib.textContent)) sib = sib.previousElementSibling;
       if (sib) {
         var a = sib.tagName === "A" ? sib : sib.closest && sib.closest("a");
-        if (a && card.contains(a)) return { ref: a, mode: "after" };
+        // a link that only wraps the title: chips go after it. A link that wraps the whole card (it contains the
+        // employer line too, as on Jobs home) is not a safe place: use the title's text block inside it instead.
+        if (a && card.contains(a) && !a.contains(anchor)) return { ref: a, mode: "after" };
         // LinkedIn wraps the title in layout-only divs (display: contents). Chips must go inside the title's own
         // text block (<p> or heading) to share its line; checked on the live search page.
         var inner = sib.querySelector && sib.querySelector("p, h1, h2, h3, h4");

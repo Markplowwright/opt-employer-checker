@@ -87,7 +87,7 @@ test("a page with nothing recognisable gives nothing, on every reader", () => {
 });
 
 test("jobs home: the left sidebar profile card + footer is not a job card", () => {
-  const foot = Array.from({ length: 10 }, (_, i) => "<p>Footer link " + i + "</p>").join("");
+  const foot = Array.from({ length: 13 }, (_, i) => "<p>Footer link " + i + "</p>").join("");
   const { document: d } = parseHTML('<html><head><title>Jobs | LinkedIn</title></head><body><aside><div><img src="me"><p>Premium</p><p>New York City Metropolitan Area</p>' + foot + '</div></aside></body></html>');
   assert.deepEqual(OptReader.readCards(d), []);
 });
@@ -117,4 +117,18 @@ test("title line slot: title inside layout-only wrappers, chips go into the titl
   const card = d.getElementById("card"), anchor = d.getElementById("co");
   const slot = OptReader.titleSlot(card, anchor);
   assert.equal(slot.mode, "append"); assert.equal(slot.ref.id, "t");
+});
+
+test("jobs home: wrapper link around the whole card, bullet separators, many fields; sidebar still ignored", () => {
+  const d = load("jobs-home.html");
+  const cards = OptReader.readCards(d);
+  assert.deepEqual(cards.map((c) => c.name), ["SISL Global", "Embrava"]);
+});
+
+test("jobs home: chips go into the title's text block, not after a link that wraps the whole card", () => {
+  const d = load("jobs-home.html");
+  const [a, b] = OptReader.readCards(d);
+  const s1 = OptReader.titleSlot(a.el, a.anchor);
+  assert.equal(s1.mode, "append"); assert.equal(s1.ref.tagName, "P");
+  assert.equal(OptReader.titleSlot(b.el, b.anchor).ref.tagName, "P");
 });
