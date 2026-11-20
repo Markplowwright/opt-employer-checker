@@ -1,4 +1,4 @@
-<p align="center"><img src="brand/logo-horizontal.png" alt="OPT Employer Checker" width="420"></p>
+<p align="center"><img src="brand/logo-banner.png" alt="OPT Employer Checker" width="420"></p>
 
 A free Chrome extension that shows **E-Verify** and **H-1B** information next to employers on LinkedIn job pages, so F-1 and STEM OPT job seekers can spot problems *before* they accept an offer.
 
