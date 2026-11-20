@@ -4,7 +4,7 @@
 
 ## The problem
 
-STEM OPT students need an employer that is enrolled in E-Verify and willing to sign an I-983 training plan. Finding out means leaving the job post, searching the E-Verify employer list by hand, and then doing the same for H-1B history on a second government site. Most students skip it until after the offer, which is when a mistake costs the most.
+STEM OPT students need an employer that is enrolled in E-Verify and willing to sign an I-983 training plan. Finding out means leaving the job post, searching the E-Verify employer list by hand, and then doing the same for H-1B history on a second government site. That is a lot of friction at the stage where a mistake costs the most, and it is easy to put off until after the offer.
 
 I was in that position myself, so I built the tool I wanted: the answer appears right on the LinkedIn job page.
 
@@ -18,7 +18,7 @@ It deliberately cannot say whether an employer will sign an I-983. The panel say
 
 **1. A wrong answer is worse than no answer.**
 An "OK" on the wrong company could cost someone a job or their status, so the rules are strict:
-- A match must be an **exact name match after normalizing** the name (case, punctuation, "Inc"/"LLC" and similar). There is no fuzzy matching, and nothing ever shows green on a near match.
+- A match must be an **exact name match after normalizing** the name (case, accents, punctuation, and trailing legal suffixes such as "Inc" or "LLC"). There is no fuzzy matching, and nothing ever shows green on a near match.
 - "Not found" is never shown as a "no". Our data covers about 77% of E-Verify employers, so the chip says "not found" and the panel explains that this is not a verdict.
 - If the data can't be loaded, the chip says "couldn't check", never "not enrolled".
 - The data date and the source link are always visible, because the data ages.
