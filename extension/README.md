@@ -5,7 +5,11 @@ Shows E-Verify and H-1B facts next to employers on LinkedIn job pages. Unofficia
 ## Try it (unpacked)
 1. Open `chrome://extensions` and turn on **Developer mode**.
 2. Click **Load unpacked** and choose this `extension` folder.
-3. Open a LinkedIn jobs page (`linkedin.com/jobs/...`). Each job card and the selected job's detail pane get two chips: **E-Verify** and **H-1B**. Click a chip for the details popup (Esc or the X closes it).
+3. Open a LinkedIn jobs page. Each job card and the selected job's employer get two chips: **E-Verify** and **H-1B**. Click a chip for the details popup (Esc or the X closes it).
+
+## Pages covered on LinkedIn (v0.2.0)
+Jobs home, search results, job collections (recommended, similar), a single job page (`/jobs/view/...`), the job tracker / saved jobs, and a company's Jobs tab. Not yet: job posts inside the feed, and other job sites.
+LinkedIn runs more than one layout at once, so the reader (`content/reader.js`) tries several independent methods and never depends on hashed class names. `test/fixtures/` holds a compact copy of each page type; if LinkedIn changes one, its test fails.
 
 ## How it works
 - `content/reader.js` reads employer names from the page (fails quiet if LinkedIn changes its layout).
