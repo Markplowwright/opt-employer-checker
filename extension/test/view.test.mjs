@@ -77,3 +77,9 @@ test("staffing hint text and summary line", () => {
   assert.match(v.staffing, /weak hint/); assert.match(v.staffing, /provides and supervises/);
   assert.equal(summary(v), "1 enrollment on file · H-1B FY2025: 5");
 });
+
+test("compact H-1B text for small card chips (full year, partial year, none)", () => {
+  assert.equal(buildView("Infosys", found(INFOSYS)).h1b.mini, "H-1B 2,856");
+  assert.equal(buildView("Equinox", found({ n: "Equinox", r: [{ e: "2021-10-28" }], h: { 2026: [1, 0] } })).h1b.mini, "H-1B 1*");
+  assert.equal(buildView("Axonic", { found: false, key: "axonic", meta: META }).h1b.mini, "H-1B 0");
+});

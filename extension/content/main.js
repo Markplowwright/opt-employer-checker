@@ -23,10 +23,12 @@
   function place(target, kind) {
     var rec = chips.get(target.anchor);
     if (!rec || !rec.ui.host.isConnected) {
-      var ui = OptUI.createChips();
+      var ui = OptUI.createChips(kind === "card");
       rec = { name: null, ui: ui };
       chips.set(target.anchor, rec);
-      if (kind === "card") target.anchor.insertAdjacentElement("afterend", ui.host);
+      var slot = kind === "card" && target.card ? OptReader.titleSlot(target.card, target.anchor) : null;
+      if (slot && slot.mode === "append") slot.ref.appendChild(ui.host);
+      else if (slot) slot.ref.insertAdjacentElement("afterend", ui.host);
       else target.anchor.insertAdjacentElement("afterend", ui.host);
     }
     if (rec.name !== target.name || rec.shown !== !!results[target.name]) {
@@ -43,7 +45,7 @@
     timer = null;
     try {
       if (!OptReader.applies(location)) return;      // LinkedIn is a single-page app: re-check the path on every scan
-      var targets = OptReader.readCards(document).map(function (c) { return { anchor: c.anchor, name: c.name, kind: "card" }; });
+      var targets = OptReader.readCards(document).map(function (c) { return { anchor: c.anchor, card: c.el, name: c.name, kind: "card" }; });
       var d = OptReader.readDetail(document, location);
       if (d) targets.push({ anchor: d.anchor, name: d.name, kind: "detail" });
       if (!targets.length) return;

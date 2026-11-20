@@ -41,7 +41,8 @@
     var note = !h ? "No H-1B records under this exact name. Spelling variants are not merged."
       : "All years since FY" + firstYear + ": " + fmt(all) + ". *FY" + part + " is partial.";
     var short = !h ? "" : fullN > 0 ? "H-1B FY" + full + ": " + fmt(fullN) : partN > 0 ? "H-1B FY" + part + "*: " + fmt(partN) : "H-1B FY" + full + ": 0";
-    return { available: true, chip: chip, aria: aria, bars: bars, note: note, short: short };
+    var mini = !h ? "H-1B 0" : fullN > 0 ? "H-1B " + fmt(fullN) : partN > 0 ? "H-1B " + fmt(partN) + "*" : "H-1B 0";
+    return { available: true, chip: chip, mini: mini, aria: aria, bars: bars, note: note, short: short };
   }
 
   function buildView(name, result) {

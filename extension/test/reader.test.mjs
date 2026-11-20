@@ -87,7 +87,7 @@ test("a page with nothing recognisable gives nothing, on every reader", () => {
 });
 
 test("jobs home: the left sidebar profile card + footer is not a job card", () => {
-  const foot = Array.from({ length: 10 }, (_, i) => "<p>Footer link " + i + "</p>").join("");
+  const foot = Array.from({ length: 13 }, (_, i) => "<p>Footer link " + i + "</p>").join("");
   const { document: d } = parseHTML('<html><head><title>Jobs | LinkedIn</title></head><body><aside><div><img src="me"><p>Premium</p><p>New York City Metropolitan Area</p>' + foot + '</div></aside></body></html>');
   assert.deepEqual(OptReader.readCards(d), []);
 });
@@ -95,4 +95,40 @@ test("jobs home: the left sidebar profile card + footer is not a job card", () =
 test("a 'Premium' label line is never taken as the employer", () => {
   const { document: d } = parseHTML('<html><body><div><img src="x"><a href="/jobs/view/9/">t</a><p>Premium</p><p>Acme Corp</p><p>Austin, TX (On-site)</p></div></body></html>');
   assert.deepEqual(OptReader.readCards(d).map((c) => c.name), ["Acme Corp"]);
+});
+
+test("title line slot: chips go after the title link, never inside it", () => {
+  const doc = load("jobs-page-new.html");
+  const cards = OptReader.readCards(doc);
+  const slot = OptReader.titleSlot(cards[0].el, cards[0].anchor);
+  assert.equal(slot.mode, "after"); assert.equal(slot.ref.tagName, "A");
+  const tr = load("jobs-tracker.html"), tc = OptReader.readCards(tr);
+  assert.equal(OptReader.titleSlot(tc[0].el, tc[0].anchor).ref.tagName, "A");
+});
+
+test("title line slot: classic card, chips after the title link", () => {
+  const cards = OptReader.readCards(document);
+  const slot = OptReader.titleSlot(cards[0].el, cards[0].anchor);
+  assert.ok(slot && slot.ref.className.includes("job-card-list__title--link"));
+});
+
+test("title line slot: title inside layout-only wrappers, chips go into the title's own <p>", () => {
+  const { document: d } = parseHTML('<html><body><div id="card"><img src="x"><div><div id="wrap"><p id="t"><span>Help Desk (Verified job)</span><span>Help Desk</span></p></div><div><p id="co">Acme Corp</p></div><p>Austin, TX (On-site)</p></div></div></body></html>');
+  const card = d.getElementById("card"), anchor = d.getElementById("co");
+  const slot = OptReader.titleSlot(card, anchor);
+  assert.equal(slot.mode, "append"); assert.equal(slot.ref.id, "t");
+});
+
+test("jobs home: wrapper link around the whole card, bullet separators, many fields; sidebar still ignored", () => {
+  const d = load("jobs-home.html");
+  const cards = OptReader.readCards(d);
+  assert.deepEqual(cards.map((c) => c.name), ["SISL Global", "Embrava"]);
+});
+
+test("jobs home: chips go into the title's text block, not after a link that wraps the whole card", () => {
+  const d = load("jobs-home.html");
+  const [a, b] = OptReader.readCards(d);
+  const s1 = OptReader.titleSlot(a.el, a.anchor);
+  assert.equal(s1.mode, "append"); assert.equal(s1.ref.tagName, "P");
+  assert.equal(OptReader.titleSlot(b.el, b.anchor).ref.tagName, "P");
 });
