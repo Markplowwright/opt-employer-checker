@@ -31,7 +31,7 @@
     ".st{font-size:12px;font-weight:700}",
     ".st span{font-weight:500;color:#5a6472}",
     ".recs{border:1px solid #e0e4ea;border-radius:10px;overflow:hidden}",
-    ".rec{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border-top:1px solid #e0e4ea}",
+    ".rec{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding:9px 11px;border-top:1px solid #e0e4ea}",
     ".rec:first-child{border-top:0}",
     ".rec .a{font-size:13px;font-weight:600;white-space:nowrap}",
     ".tag{flex:none;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px}",
@@ -131,7 +131,7 @@
 
   function detailsNode(v) {
     var d = el("div", { style: "display:flex;flex-direction:column;gap:14px" });
-    d.appendChild(el("div", { class: "tx", text: v.note }));
+    if (v.tone !== "none" && v.tone !== "error") d.appendChild(el("div", { class: "tx", text: v.note }));   // none/error already show it above
     if (v.records.length) {
       var list = el("div", { class: "recs" });
       v.records.forEach(function (r) {

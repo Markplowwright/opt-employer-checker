@@ -35,3 +35,15 @@ test("fails quiet on a page it does not understand", () => {
   assert.deepEqual(OptReader.readCards(other), []);
   assert.equal(OptReader.readDetail(other), null);
 });
+
+const { document: nd } = parseHTML(readFileSync(new URL("./fixtures/jobs-page-new.html", import.meta.url), "utf8"));
+
+test("newer layout: employer is the first non-location <p> in each job card", () => {
+  const cards = OptReader.readCards(nd);
+  assert.deepEqual(cards.map((c) => c.name), ["Legora", "Equinox Holdings"]);
+});
+
+test("newer layout: detail pane employer is the company link outside the cards, not 'employees' links", () => {
+  const d = OptReader.readDetail(nd);
+  assert.equal(d.name, "Legora");
+});
