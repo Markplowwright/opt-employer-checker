@@ -86,7 +86,9 @@
   // compact = small chips that sit on the job title line of a list card; full size is used beside the employer
   // name in the detail pane / single job page.
   function createChips(compact) {
-    var h = shadowHost({ style: compact ? "display:inline-block;vertical-align:middle;margin-left:8px" : "display:block" });
+    // The detail chips sit in LinkedIn's company row, which spreads its items apart on wide windows.
+    // An auto right margin keeps them touching the company name and leaves the row's menu on the right.
+    var h = shadowHost({ style: compact ? "display:inline-block;vertical-align:middle;margin-left:8px" : "display:block;margin-right:auto" });
     var row = el("div", { class: compact ? "row s" : "row" });
     h.sr.appendChild(row);
     return {

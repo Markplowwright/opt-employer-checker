@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OPT Employer Checker",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Shows E-Verify and H-1B facts next to employers on LinkedIn job pages. Unofficial; not legal advice.",
   "permissions": [],
   "host_permissions": [
