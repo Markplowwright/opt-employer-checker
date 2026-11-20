@@ -21,5 +21,5 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true; // keep the channel open for the async answer
 });
 
-// The toolbar icon opens the data site's speed-test page (handy for checking the data is reachable).
+// The toolbar icon opens the data site's About page (what it does, data date and sources, privacy).
 chrome.action.onClicked.addListener(() => chrome.tabs.create({ url: BASE }));

@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>OPT Employer Checker: data speed test</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}pre{background:#f4f4f4;padding:1rem;overflow:auto}button{font:inherit;padding:.5rem 1rem;margin:.25rem .25rem .25rem 0}</style>
+<h1>Data speed test</h1>
+<p>Times real lookups against this site's shard files. Nothing is sent except a 3-character hash prefix. Unofficial; not legal advice.</p>
+<button id="cold">Run (cold: clears the cache first)</button>
+<button id="warm">Run again (warm)</button>
+<pre id="out">Press a button.</pre>
+<script type="module">
+import { createShardClient } from "./lib/shards.js";
+const names = ["Cognizant Technology Solutions","Infosys Limited","Steven Madden, Ltd.","Accenture LLP","Deloitte Consulting LLP","Amazon.com Services LLC","Google LLC","Microsoft Corporation","JPMorgan Chase & Co.","IBM","Capital One","Wells Fargo","Oracle America, Inc.","Tata Consultancy Services","Wipro Limited","HCL America Inc","Salesforce, Inc.","Adobe Inc.","Goldman Sachs","Bank of America","Walmart Inc","Target Corporation","Verizon","Intel Corporation","Cisco Systems, Inc."];
+const out = document.getElementById("out");
+const ms = (t) => Math.round(performance.now() - t);
+async function run(cold) {
+  out.textContent = "Running...";
+  const base = new URL("./", location.href).href;
+  if (cold) await caches.delete("shard-speedtest");
+  const cache = await caches.open("shard-speedtest");
+  const c = createShardClient({ base, cache });            // fresh in-memory state each run
+  const r = {};
+  let t = performance.now(); const one = await c.lookupName(names[0]); r.firstLookupMs = ms(t);
+  t = performance.now(); await c.lookupName(names[0]); r.repeatLookupMs = ms(t);
+  t = performance.now(); const list = await c.lookupMany(names); r.list25Ms = ms(t);
+  const vals = [...list.values()];
+  r.listFound = vals.filter((v) => v.found).length;
+  r.listErrors = vals.filter((v) => v.error).length;
+  r.stats = c.stats;
+  r.dataDate = (await c.getMeta()).data_date;
+  r.mode = cold ? "cold (empty disk cache)" : "warm (disk cache)";
+  out.textContent = JSON.stringify(r, null, 2);
+}
+cold.onclick = () => run(true); warm.onclick = () => run(false);
+</script>
