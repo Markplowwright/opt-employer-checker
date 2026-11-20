@@ -127,7 +127,27 @@
     return null;
   }
 
-  var api = { readCards: readCards, readDetail: readDetail, applies: applies, titleEmployer: titleEmployer, clean: clean };
+  // Where to put small chips on a list card: on the job title line. The title block is the nearest non-empty
+  // element before the employer line. If it is (inside) a link, chips go after the link, never inside it.
+  function titleSlot(card, anchor) {
+    var el = anchor;
+    while (el && el !== card) {
+      var sib = el.previousElementSibling;
+      while (sib && !clean(sib.textContent)) sib = sib.previousElementSibling;
+      if (sib) {
+        var a = sib.tagName === "A" ? sib : sib.closest && sib.closest("a");
+        if (a && card.contains(a)) return { ref: a, mode: "after" };
+        // LinkedIn wraps the title in layout-only divs (display: contents). Chips must go inside the title's own
+        // text block (<p> or heading) to share its line; checked on the live search page.
+        var inner = sib.querySelector && sib.querySelector("p, h1, h2, h3, h4");
+        return { ref: inner || sib, mode: "append" };
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  var api = { titleSlot: titleSlot, readCards: readCards, readDetail: readDetail, applies: applies, titleEmployer: titleEmployer, clean: clean };
   root.OptReader = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

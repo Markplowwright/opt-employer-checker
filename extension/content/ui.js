@@ -10,6 +10,9 @@
     ":host{all:initial}",
     "*{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif}",
     ".row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}",
+    ".row.s{flex-wrap:nowrap;gap:4px;margin:0}",
+    ".row.s button.chip{min-height:20px;gap:3px;padding:0 7px 0 4px;font-size:11px}",
+    ".row.s button.chip.plain{padding:0 7px}",
     "button.chip{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px 0 6px;border:0;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;line-height:1}",
     "button.chip.plain{padding:0 10px}",
     "button.chip:focus-visible,button.btn:focus-visible,a:focus-visible{outline:2px solid #1f5fbf;outline-offset:2px}",
@@ -80,9 +83,11 @@
   }
 
   // ---- chips next to an employer name ----
-  function createChips() {
-    var h = shadowHost({ style: "display:block" });
-    var row = el("div", { class: "row" });
+  // compact = small chips that sit on the job title line of a list card; full size is used beside the employer
+  // name in the detail pane / single job page.
+  function createChips(compact) {
+    var h = shadowHost({ style: compact ? "display:inline-block;vertical-align:middle;margin-left:8px" : "display:block" });
+    var row = el("div", { class: compact ? "row s" : "row" });
     h.sr.appendChild(row);
     return {
       host: h.host,
@@ -93,11 +98,11 @@
       show: function (view, onOpen) {
         row.textContent = "";
         var t = TONES[view.tone] || TONES.none;
-        var b1 = el("button", { class: "chip", "aria-label": view.eAria + ". Open details", style: "background:" + t[0] + ";color:" + t[1] }, [circleIcon(view.tone, 14), view.eChip]);
+        var b1 = el("button", { class: "chip", title: view.eChip, "aria-label": view.eAria + ". Open details", style: "background:" + t[0] + ";color:" + t[1] }, [circleIcon(view.tone, compact ? 12 : 14), compact ? "E-Verify" : view.eChip]);
         b1.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); onOpen(b1); });
         row.appendChild(b1);
         if (view.h1b.available) {
-          var b2 = el("button", { class: "chip plain", "aria-label": view.h1b.aria + ". Open details", style: "background:#e6edfa;color:#1b3a80" }, [view.h1b.chip]);
+          var b2 = el("button", { class: "chip plain", title: view.h1b.chip, "aria-label": view.h1b.aria + ". Open details", style: "background:#e6edfa;color:#1b3a80" }, [compact ? view.h1b.mini : view.h1b.chip]);
           b2.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); onOpen(b2); });
           row.appendChild(b2);
         }
