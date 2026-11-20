@@ -1,0 +1,95 @@
+// Turns a lookup result into what the chips and popup show. Pure functions, no DOM: easy to test.
+// Rules: "not found" is not a verdict; green only for an exact normalized-name match (the lookup is exact-only);
+// every state carries the data date; errors are "couldn't check", never "not found".
+(function (root) {
+  var SIZE = { a: "1 to 4", b: "5 to 9", c: "10 to 19", d: "20 to 99", e: "100 to 499", f: "500 to 999",
+    g: "1,000 to 2,499", h: "2,500 to 4,999", i: "5,000 to 9,999", j: "10,000 and over" };
+
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+  // A record is open when the dashboard lists no end date, or says Open although an earlier end date exists (u=1).
+  function isOpen(r) { return !r.t || !!r.u; }
+
+  function recordRows(recs, head) {
+    return recs.map(function (r) {
+      var meta = [];
+      if (r.s) meta.push(r.s.split(",").length > 6 ? r.s.split(",").slice(0, 6).join(", ") + " +" + (r.s.split(",").length - 6) : r.s.split(",").join(", "));
+      if (r.z && SIZE[r.z]) meta.push(SIZE[r.z]);
+      if (r.n && r.n !== head) meta.push('as "' + r.n + '"');
+      if (r.u) meta.push("an earlier end date is also listed");
+      var tag = !isOpen(r) ? "Ended " + r.t : (r.x ? "Ends " + r.x : "Open");
+      return { enrolled: r.e || "", meta: meta.join(" · "), tag: tag, open: isOpen(r) };
+    }).sort(function (a, b) { return a.open === b.open ? (a.enrolled < b.enrolled ? 1 : -1) : (a.open ? -1 : 1); });
+  }
+
+  function h1bView(entry, meta) {
+    if (!meta || meta.h1b_full_fy == null) return { available: false };
+    var h = entry && entry.h;
+    var full = String(meta.h1b_full_fy), part = String(meta.h1b_partial_fy);
+    var fullN = h && h[full] ? h[full][0] : 0, partN = h && h[part] ? h[part][0] : 0;
+    var bars = [];
+    if (h) {
+      var years = Object.keys(h).map(Number).sort(function (a, b) { return a - b; }).slice(-4);
+      bars = years.map(function (y) { return { label: "FY" + y + (String(y) === part ? "*" : ""), value: h[y][0], partial: String(y) === part }; });
+    }
+    var chip, aria;
+    if (!h) { chip = "H-1B: none found"; aria = "No H-1B approvals found under this exact name"; }
+    else if (fullN > 0) { chip = "H-1B: " + fmt(fullN) + " · FY" + full; aria = fmt(fullN) + (fullN === 1 ? " H-1B petition" : " H-1B petitions") + " approved in FY" + full; }
+    else if (partN > 0) { chip = "H-1B: " + fmt(partN) + " · FY" + part + "*"; aria = fmt(partN) + (partN === 1 ? " H-1B petition" : " H-1B petitions") + " approved so far in FY" + part + ", a partial year"; }
+    else { chip = "H-1B: 0 · FY" + full; aria = "No H-1B petitions approved in FY" + full; }
+    var all = 0; if (h) Object.keys(h).forEach(function (y) { all += h[y][0]; });
+    var firstYear = h ? Math.min.apply(null, Object.keys(h).map(Number)) : null;
+    var note = !h ? "No H-1B records under this exact name. Spelling variants are not merged."
+      : "All years since FY" + firstYear + ": " + fmt(all) + ". *FY" + part + " is partial.";
+    var short = !h ? "" : fullN > 0 ? "H-1B FY" + full + ": " + fmt(fullN) : partN > 0 ? "H-1B FY" + part + "*: " + fmt(partN) : "H-1B FY" + full + ": 0";
+    return { available: true, chip: chip, aria: aria, bars: bars, note: note, short: short };
+  }
+
+  function buildView(name, result) {
+    var date = (result && result.meta && result.meta.data_date) || "";
+    if (!result || result.error) {
+      return { name: name, key: result && result.key || "", tone: "error", chip: "Couldn’t check",
+        eChip: "E-Verify: couldn’t check", eAria: "E-Verify: couldn’t check right now",
+        headline: "We couldn’t reach the data right now.",
+        note: "This does not mean the employer is not enrolled. Check your connection and try again.",
+        records: [], h1b: { available: false }, staffing: "", dataDate: date, searchedFor: result && result.key || "" };
+    }
+    var entry = result.found ? result.entry : null;
+    var recs = entry ? entry.r || [] : [];
+    var meta = result.meta || {};
+    var h1b = h1bView(entry, meta);
+    var staffing = entry && entry.f && entry.f.length
+      ? 'The name contains "' + entry.f[0] + '", a weak hint. A W-2 staffing employer can sign an I-983 only if it is enrolled and provides and supervises your training itself.'
+      : "";
+    var base = { name: name, key: result.key, records: recordRows(recs, entry && entry.n), h1b: h1b, staffing: staffing, dataDate: date, displayName: entry && entry.n || name };
+    if (!recs.length) {
+      return Object.assign(base, { tone: "none", chip: "Not found", eChip: "E-Verify: not found", eAria: "E-Verify: not found in our data",
+        headline: "No exact match in our E-Verify data.",
+        note: "Not found is not a verdict. Our data covers about " + (meta.coverage_pct || 77) + "% of E-Verify employers. Ask the employer for their E-Verify company ID." });
+    }
+    var open = recs.filter(isOpen);
+    if (open.length) {
+      var sched = open.filter(function (r) { return r.x; });
+      var latestOpen = open.map(function (r) { return r.e || ""; }).sort().pop();
+      var ended = recs.length - open.length;
+      return Object.assign(base, { tone: "ok", chip: "Enrolled", eChip: "E-Verify: enrolled", eAria: "E-Verify: enrolled",
+        headline: sched.length === open.length ? "Enrolled, with an end date listed: " + sched[0].x + "." : "Enrolled, no end date listed.",
+        note: (open.length === 1 ? "An enrollment started " + latestOpen + " is open." : open.length + " enrollments are open.") +
+          (ended ? " " + ended + " earlier " + (ended === 1 ? "enrollment has" : "enrollments have") + " ended." : "") });
+    }
+    var lastEnd = recs.map(function (r) { return r.t; }).sort().pop();
+    return Object.assign(base, { tone: "ended", chip: "Enrollment ended", eChip: "E-Verify: ended", eAria: "E-Verify: enrollment ended",
+      headline: recs.length === 1 ? "Only enrollment on file ended " + lastEnd + "." : "Latest enrollment ended " + lastEnd + ".",
+      note: "No current enrollment in our data. We cover about " + (meta.coverage_pct || 77) + "% of E-Verify employers, so one could be missing." });
+  }
+
+  function summary(v) {
+    var parts = [];
+    if (v.records.length) parts.push(v.records.length + (v.records.length === 1 ? " enrollment" : " enrollments") + " on file");
+    if (v.h1b.available && v.h1b.short) parts.push(v.h1b.short);
+    return parts.join(" · ");
+  }
+
+  var api = { buildView: buildView, summary: summary, SIZE: SIZE };
+  root.OptView = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);

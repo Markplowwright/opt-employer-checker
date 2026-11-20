@@ -6,13 +6,16 @@ that one small file. The host only ever sees the short prefix, never the company
 (the same idea as the Have I Been Pwned range API).
 
 Input : index.ndjson.gz + meta.json from build_index.py
+        optional: h1b.json + h1b_meta.json from fetch_h1b.py (--h1b <dir>); H-1B per-year totals are
+        added to each shard entry as "h": {"<fiscal year>": [approved, denied]}, and companies that
+        only appear in the H-1B data get their own entry with an empty "r" list.
 Output: <out>/meta.json                      (small, fetched first, never cached long)
         <out>/<data_date>/<prefix>.json      (one JSON object per shard: {key: {n, f?, r}})
 
 Every possible prefix gets a file (an empty shard is "{}"), so a 404 is always an error
 and never "employer not found".
 
-Usage: python build_shards.py <build_dir> <out_dir>
+Usage: python build_shards.py <build_dir> <out_dir> [--h1b <h1b_dir>]
 """
 import gzip
 import hashlib
@@ -43,7 +46,31 @@ def split_ndjson_gz(path, prefix_hex: int = PREFIX_HEX):
     return shards
 
 
-def write_shards(shards, out_dir, data_date, build_meta, prefix_hex: int = PREFIX_HEX):
+def h1b_compact(entry):
+    """{fiscal year: [approved, denied]}; approved = initial + continuing + other."""
+    out = {}
+    for fy, y in entry["years"].items():
+        out[fy] = [y["ia"] + y["ca"] + y["oa"], y["id"] + y["cd"] + y["od"]]
+    return out
+
+
+def merge_h1b(shards, h1b, prefix_hex: int = PREFIX_HEX):
+    """Add H-1B totals to shard entries (in place). Returns how many H-1B-only companies were added."""
+    added = 0
+    for key, h in h1b.items():
+        shard = shards[shard_prefix(key, prefix_hex)]
+        entry = shard.get(key)
+        if entry is None:
+            entry = {"n": h["name"], "r": []}
+            shard[key] = entry
+            added += 1
+        entry["h"] = h1b_compact(h)
+        if h.get("staffing") and not entry.get("f"):
+            entry["f"] = list(h["staffing"])
+    return added
+
+
+def write_shards(shards, out_dir, data_date, build_meta, prefix_hex: int = PREFIX_HEX, h1b_meta=None):
     """Write shard files and the top-level meta.json. Returns the meta dict."""
     shard_dir = os.path.join(out_dir, data_date)
     os.makedirs(shard_dir, exist_ok=True)
@@ -78,26 +105,44 @@ def write_shards(shards, out_dir, data_date, build_meta, prefix_hex: int = PREFI
         "format": build_meta.get("ndjson", {}).get("format"),
         "ndjson_sha256": build_meta.get("ndjson", {}).get("sha256"),
     }
+    if h1b_meta:
+        years = h1b_meta["years_fetched"]
+        meta["h1b_partial_fy"] = max(years)       # the newest fiscal year is still in progress
+        meta["h1b_full_fy"] = max(years) - 1
+        meta["h1b_built"] = h1b_meta.get("built")
+        meta["h1b_source"] = h1b_meta.get("source")
     with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
     return meta
 
 
-def main(build_dir, out_dir):
+def main(build_dir, out_dir, h1b_dir=None):
     with open(os.path.join(build_dir, "meta.json"), encoding="utf-8") as f:
         build_meta = json.load(f)
     shards = split_ndjson_gz(os.path.join(build_dir, "index.ndjson.gz"))
-    meta = write_shards(shards, out_dir, build_meta["data_date"], build_meta)
-    # Guard: every key from the build must have landed in a shard.
     expected = build_meta["ndjson"]["lines"]
+    h1b_meta = None
+    if h1b_dir:
+        with open(os.path.join(h1b_dir, "h1b_meta.json"), encoding="utf-8") as f:
+            h1b_meta = json.load(f)
+        with open(os.path.join(h1b_dir, "h1b.json"), encoding="utf-8") as f:
+            expected += merge_h1b(shards, json.load(f))
+    meta = write_shards(shards, out_dir, build_meta["data_date"], build_meta, h1b_meta=h1b_meta)
+    # Guard: every key from the inputs must have landed in a shard.
     if meta["name_keys"] != expected:
-        sys.exit("shard key count {} != ndjson lines {}".format(meta["name_keys"], expected))
+        sys.exit("shard key count {} != expected {}".format(meta["name_keys"], expected))
     print("shards:", meta["shards"], "keys:", meta["name_keys"],
           "raw MB:", round(meta["raw_bytes"] / 1e6, 1),
           "largest raw KB:", round(meta["largest_shard_raw_bytes"] / 1e3, 1))
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    args = sys.argv[1:]
+    h1b = None
+    if "--h1b" in args:
+        i = args.index("--h1b")
+        h1b = args[i + 1]
+        del args[i:i + 2]
+    if len(args) != 2:
         sys.exit(__doc__)
-    main(sys.argv[1], sys.argv[2])
+    main(args[0], args[1], h1b)

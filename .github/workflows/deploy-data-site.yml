@@ -47,16 +47,29 @@ jobs:
               sys.exit("sha256 mismatch: the index and meta.json are from different builds")
           print("ok", m["data_date"], m["ndjson"]["lines"], "lines")
           PY
-      - name: Build shards
+      - name: Download the published H-1B data (h1b-latest release)
+        run: |
+          mkdir -p h1b
+          base="https://github.com/${{ github.repository }}/releases/download/h1b-latest"
+          curl -fsSL "$base/h1b_meta.json" -o h1b/h1b_meta.json
+          curl -fsSL "$base/h1b.json" -o h1b/h1b.json
+          python - <<'PY'
+          import json, sys
+          m = json.load(open("h1b/h1b_meta.json"))
+          ok = len(m["years_fetched"]) >= 10 and not m.get("years_missing")
+          print("h1b years:", m["years_fetched"], "missing:", m.get("years_missing"))
+          sys.exit(0 if ok else "H-1B data looks thin; not publishing")
+          PY
+      - name: Build shards (E-Verify + H-1B)
         working-directory: data-pipeline
-        run: python build_shards.py ../build ../_site
+        run: python build_shards.py ../build ../_site --h1b ../h1b
       - name: Safety gate (never publish a thin site)
         run: |
           python - <<'PY'
           import json, os, sys
           m = json.load(open("_site/meta.json"))
           n = len(os.listdir("_site/" + m["shard_path"]))
-          ok = m["name_keys"] >= 500000 and n == m["shards"] == 4096
+          ok = m["name_keys"] >= 900000 and n == m["shards"] == 4096 and "h1b_full_fy" in m
           print("keys", m["name_keys"], "shard files", n)
           sys.exit(0 if ok else 1)
           PY

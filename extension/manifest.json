@@ -1,19 +1,24 @@
 {
   "manifest_version": 3,
   "name": "OPT Employer Checker",
-  "version": "0.0.3",
-  "description": "Shows E-Verify and H-1B facts next to employers on job pages. Unofficial; not legal advice.",
+  "version": "0.1.0",
+  "description": "Shows E-Verify and H-1B facts next to employers on LinkedIn job pages. Unofficial; not legal advice.",
   "permissions": [],
   "host_permissions": [
-    "https://github.com/*",
-    "https://objects.githubusercontent.com/*",
-    "https://release-assets.githubusercontent.com/*"
+    "https://markplowwright.github.io/*"
   ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/jobs/*"],
+      "js": ["content/reader.js", "content/view.js", "content/ui.js", "content/main.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
-    "default_title": "OPT Employer Checker: data download test"
+    "default_title": "OPT Employer Checker: open the data site"
   }
 }
