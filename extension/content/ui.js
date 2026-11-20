@@ -13,6 +13,9 @@
     ".row.s{flex-wrap:nowrap;gap:4px;margin:0}",
     ".row.s button.chip{min-height:20px;gap:3px;padding:0 7px 0 4px;font-size:11px}",
     ".row.s button.chip.plain{padding:0 7px}",
+    ".row.m{gap:4px 6px}",
+    ".row.m button.chip{min-height:22px;gap:4px;padding:0 8px 0 5px;font-size:11px}",
+    ".row.m button.chip.plain{padding:0 8px}",
     "button.chip{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px 0 6px;border:0;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;line-height:1}",
     "button.chip.plain{padding:0 10px}",
     "button.chip:focus-visible,button.btn:focus-visible,a:focus-visible{outline:2px solid #1f5fbf;outline-offset:2px}",
@@ -87,9 +90,9 @@
   // name in the detail pane / single job page.
   function createChips(compact) {
     // The detail chips sit in LinkedIn's company row, which spreads its items apart on wide windows.
-    // An auto right margin keeps them touching the company name and leaves the row's menu on the right.
-    var h = shadowHost({ style: compact ? "display:inline-block;vertical-align:middle;margin-left:8px" : "display:block;margin-right:auto" });
-    var row = el("div", { class: compact ? "row s" : "row" });
+    // An auto right margin keeps them next to the company name (12px away) and leaves the row's menu on the right.
+    var h = shadowHost({ style: compact ? "display:inline-block;vertical-align:middle;margin-left:8px" : "display:block;margin:0 auto 0 12px" });
+    var row = el("div", { class: compact ? "row s" : "row m" });
     h.sr.appendChild(row);
     return {
       host: h.host,
@@ -100,7 +103,7 @@
       show: function (view, onOpen) {
         row.textContent = "";
         var t = TONES[view.tone] || TONES.none;
-        var b1 = el("button", { class: "chip", title: view.eChip, "aria-label": view.eAria + ". Open details", style: "background:" + t[0] + ";color:" + t[1] }, [circleIcon(view.tone, compact ? 12 : 14), compact ? "E-Verify" : view.eChip]);
+        var b1 = el("button", { class: "chip", title: view.eChip, "aria-label": view.eAria + ". Open details", style: "background:" + t[0] + ";color:" + t[1] }, [circleIcon(view.tone, 12), compact ? "E-Verify" : view.eChip]);
         b1.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); onOpen(b1); });
         row.appendChild(b1);
         if (view.h1b.available) {
