@@ -22,7 +22,7 @@ Click a chip for the details: enrollment dates, a few years of H-1B history, the
 
 HONEST BY DESIGN
 • Exact name matches only. A similar-looking name is never shown as a match.
-• "Not found" is not a verdict. The E-Verify data covers about 77% of employers, so an enrolled employer can be missing.
+• "Not found" is not a verdict. The E-Verify data covers about 99.6% of employers, so an enrolled employer can still be missing.
 • If the data can't be loaded, the chip says "couldn't check", never "not enrolled".
 • The data date and a source link are always shown.
 • Some E-Verify enrollments cover only federal-contract work, and the panel says so.
