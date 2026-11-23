@@ -81,7 +81,7 @@ code{background:#f1f3f6;padding:.05rem .3rem;border-radius:4px;font-size:.9em}
 
     <h2>Data and sources</h2>
   <ul>
-    <li>E-Verify: the public <a href="https://www.e-verify.gov/e-verify-employer-search" rel="noopener">E-Verify employer search</a> data. We cover <span id="cov">about three quarters of</span> E-Verify employers, so an employer can be missing.</li>
+    <li>E-Verify: the public <a href="https://www.e-verify.gov/e-verify-employer-search" rel="noopener">E-Verify employer search</a> data. We cover <span id="cov">most</span> E-Verify employers, so an employer can be missing.</li>
     <li>H-1B approvals: the <a href="https://www.uscis.gov/tools/reports-and-studies/h-1b-employer-data-hub" rel="noopener">USCIS H-1B Employer Data Hub</a>.</li>
     <li>Data date: <strong id="dd">loading&hellip;</strong>. The extension always shows the data date next to what it tells you.</li>
     <li>Some E-Verify enrollments cover only federal-contract work. An enrollment on file may not apply to the job you are applying for.</li>
@@ -125,7 +125,7 @@ code{background:#f1f3f6;padding:.05rem .3rem;border-radius:4px;font-size:.9em}
 // Reads this site's own meta.json (same origin). No third-party requests are made from this page.
 fetch("meta.json",{cache:"no-cache"}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(m){
   if(m.data_date)document.getElementById("dd").textContent=m.data_date;
-  if(m.coverage_pct)document.getElementById("cov").textContent="about "+Math.round(m.coverage_pct)+"% of";
+  if(m.coverage_pct)document.getElementById("cov").textContent="about "+(Math.round(m.coverage_pct*10)/10)+"% of";
 }).catch(function(){document.getElementById("dd").textContent="see the extension for the current date"});
 </script>
 </body>
