@@ -16,7 +16,7 @@ A free Chrome extension that shows **E-Verify** and **H-1B** information next to
 |---|---|
 | `E-Verify: enrolled` | An open E-Verify enrollment is on file |
 | `E-Verify: ended` | Only ended enrollments are on file |
-| `E-Verify: not found` | Not in our data. **Not a verdict**: coverage is about 99.6%, so an enrolled employer can still be missing |
+| `E-Verify: not found` | Not in our data. **Not a verdict**: coverage is over 99% of what the dashboard lists, so an enrolled employer can still be missing |
 | `E-Verify: couldn't check` | The data could not be loaded. Never means "not enrolled" |
 | `H-1B: 12 · FY2025` | 12 H-1B petitions approved in the latest full fiscal year (a `*` marks a partial year) |
 
