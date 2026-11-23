@@ -1,6 +1,6 @@
 # Case study: OPT Employer Checker
 
-*A free Chrome extension that shows E-Verify and H-1B information next to employers on LinkedIn job pages. Built in about a week (first commit 2026-11-14), solo, at no cost.*
+*A free Chrome extension that shows E-Verify and H-1B information next to employers on LinkedIn job pages. Built in about a week (first commit 2026-11-14), solo, at no cost, and released on the [Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod) as v1.0.0 on 2026-11-21.*
 
 ## The problem
 
@@ -58,8 +58,13 @@ The raw government files are not committed to the repository. The pipeline downl
 
 ## What's next
 
-A Chrome Web Store release, an employer search page (including "similar names" for the cases an exact match misses), support for more job sites, and regular data refreshes.
+Version 1.0.0 is live on the Chrome Web Store. From here:
+
+- **Fresher data.** The E-Verify data is dated 2026-11-13 and is refreshed by hand, because there is no automated way to pull the full USCIS list. Keeping the data date visible matters more as it ages.
+- **An employer search page**, including "similar names" for the cases an exact match misses, so students can look up an employer without a LinkedIn post.
+- **More job sites** beyond LinkedIn.
+- **A wider audience.** The tool is useful to any F-1 student on OPT, not only STEM OPT, and the Store listing may be widened to say so.
 
 ---
 
-Code: [github.com/Markplowwright/opt-employer-checker](https://github.com/Markplowwright/opt-employer-checker) · About page: <https://markplowwright.github.io/opt-employer-checker/>
+Install: [Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod) · Code: [github.com/Markplowwright/opt-employer-checker](https://github.com/Markplowwright/opt-employer-checker) · About page: <https://markplowwright.github.io/opt-employer-checker/>
