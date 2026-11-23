@@ -19,7 +19,7 @@ It deliberately cannot say whether an employer will sign an I-983. The panel say
 **1. A wrong answer is worse than no answer.**
 An "OK" on the wrong company could cost someone a job or their status, so the rules are strict:
 - A match must be an **exact name match after normalizing** the name (case, accents, punctuation, and trailing legal suffixes such as "Inc" or "LLC"). There is no fuzzy matching, and nothing ever shows green on a near match.
-- "Not found" is never shown as a "no". Our data covers about 77% of E-Verify employers, so the chip says "not found" and the panel explains that this is not a verdict.
+- "Not found" is never shown as a "no". Our data covers about 99.6% of E-Verify employers, but not all of them (for example, an employer listed under a different legal name), so the chip says "not found" and the panel explains that this is not a verdict.
 - If the data can't be loaded, the chip says "couldn't check", never "not enrolled".
 - The data date and the source link are always visible, because the data ages.
 
@@ -37,7 +37,7 @@ The raw government files are not committed to the repository. The pipeline downl
 
 ## By the numbers
 
-- 766,059 normalized E-Verify employer names, covering about 76.7% of the 1,281,054 employers the E-Verify dashboard lists (as of 2026-11-13).
+- 987,714 normalized E-Verify employer names, covering about 99.6% of the 1,281,054 employers the E-Verify dashboard lists (exports from 2026-11-15 to 2026-11-22).
 - H-1B data from the USCIS Employer Data Hub for FY2009 to FY2026, about 376,000 employer names.
 - 4,096 shards, so a lookup downloads one small file.
 - 52 extension tests and a set of data-pipeline tests, with the build and deploy automated in GitHub Actions.
@@ -45,7 +45,7 @@ The raw government files are not committed to the repository. The pipeline downl
 
 ## What I'd say about the limits
 
-- Coverage is 76.7%, not 100%. Employers missing from the data show as "not found", and the interface is designed around that.
+- Coverage is 99.6%, not 100%. Employers missing from the data show as "not found", and the interface is designed around that.
 - Names are matched exactly. An employer filed under a slightly different legal name won't match. That is a deliberate trade: a missed match is safer than a wrong one.
 - Some E-Verify enrollments cover only federal-contract work, so an enrollment on file may not apply to the job.
 - It only works on LinkedIn, and LinkedIn can break it. The fixtures tell me quickly when it does.
@@ -60,7 +60,7 @@ The raw government files are not committed to the repository. The pipeline downl
 
 Version 1.0.0 is live on the Chrome Web Store. From here:
 
-- **Fresher data.** The E-Verify data is dated 2026-11-13 and is refreshed by hand, because the official E-Verify dashboard offers no bulk download. Keeping the data date visible matters more as it ages.
+- **Fresher data.** The E-Verify data is dated 2026-11-15 and is refreshed by hand, because the official E-Verify dashboard offers no bulk download. Keeping the data date visible matters more as it ages.
 - **An employer search page**, including "similar names" for the cases an exact match misses, so students can look up an employer without a LinkedIn post.
 - **More job sites** beyond LinkedIn.
 - **A wider audience.** The tool is useful to any F-1 student on OPT, not only STEM OPT, and the Store listing may be widened to say so.
