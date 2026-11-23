@@ -2,6 +2,8 @@
 
 A free Chrome extension that shows **E-Verify** and **H-1B** information next to employers on LinkedIn job pages, so F-1 and STEM OPT job seekers can spot problems *before* they accept an offer.
 
+**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod)** (v1.0.0, free)
+
 > **It cannot tell you an employer will sign an I-983.** This is not legal advice. Your DSO is the authority. Unofficial: not affiliated with DHS, USCIS, E-Verify or LinkedIn.
 
 **More on the About page:** <https://markplowwright.github.io/opt-employer-checker/> (what the chips mean, data date and sources, privacy). **Why it is built this way:** [CASE-STUDY.md](CASE-STUDY.md).
@@ -43,13 +45,12 @@ Click a chip for the details: enrollment dates, a few years of H-1B history, the
 3. A GitHub Actions workflow publishes the shards to GitHub Pages. They are not committed to git.
 4. `extension/` (Manifest V3) reads the company name on the LinkedIn page, hashes it, fetches one shard, and draws the chips in a shadow DOM (text only, no HTML injection).
 
-## Install (for now)
+## Install
 
-The Chrome Web Store release is planned. Until then:
+1. Open the [OPT Employer Checker page on the Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod) and click **Add to Chrome**.
+2. Open LinkedIn Jobs.
 
-1. Download or clone this repo.
-2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the `extension/` folder.
-3. Open LinkedIn Jobs.
+To run it from source instead (for development): clone this repo, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the `extension/` folder.
 
 ## Develop
 
@@ -70,4 +71,4 @@ The code is [MIT licensed](LICENSE). The data comes from public U.S. government 
 
 ## Status
 
-Version 0.3.x, LinkedIn only. Planned: Chrome Web Store release, an employer search page, more job sites, regular data refreshes.
+Version 1.0.0, [live on the Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod) since 2026-11-21. LinkedIn only. Next: an employer search page, more job sites, regular data refreshes.
