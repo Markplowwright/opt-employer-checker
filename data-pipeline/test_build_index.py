@@ -34,7 +34,7 @@ def test_build_cleans_dedupes_flags_scheduled_end_and_writes_coverage():
         meta = json.load(open(os.path.join(out, "meta.json")))
         assert json.load(gzip.open(os.path.join(out, "index.json.gz"))) == idx
     assert meta["records_unique"] == 3 and meta["records_in"] == 5
-    assert meta["data_date"] == "2026-11-13" and meta["coverage_pct"] == 37.5
+    assert meta["data_date"] == "2026-11-13" and meta["coverage_pct"] == 62  # 5 records of 8 expected
     assert idx["acme"]["recs"][0]["name"] == "Acme Corp"
     soon = idx["soon gone"]["recs"][0]
     assert soon["status"] == "open" and "ends" in soon and "terminated" not in soon
@@ -83,3 +83,25 @@ def test_ndjson_gzip_is_reproducible():
         build_index.write_ndjson_gz(idx, build_index.Path(p1))
         build_index.write_ndjson_gz(idx, build_index.Path(p2))
         assert open(p1, "rb").read() == open(p2, "rb").read()
+
+
+def test_number_of_records_column_counts_records_and_coverage_is_capped_and_date_is_oldest_slice():
+    hdr = HDR + ["Number of Records"]
+    def write(path, rows):
+        with open(path, "w", encoding="utf-16", newline="") as f:
+            w = csv.writer(f, delimiter="\t"); w.writerow(hdr); w.writerows(rows)
+    old = [["11/13/2026", "Acme Corp", "", "Open", "No", "01/05/2020", "", "10 to 19", "NY", "3"]]
+    new = [["11/21/2026", "Beta Inc", "", "Open", "No", "01/06/2020", "", "5 to 9", "CA", "1"]]
+    with tempfile.TemporaryDirectory() as d:
+        a, b = os.path.join(d, "a.csv"), os.path.join(d, "b.csv")
+        write(a, old); write(b, new)
+        out = os.path.join(d, "out")
+        build_index.main(out, [a, b], expected=4)
+        meta = json.load(open(os.path.join(out, "meta.json")))
+        assert meta["records_in"] == 2 and meta["records_total"] == 4
+        assert meta["coverage_pct"] == 99  # 4 of 4 would be 100, capped at 99
+        assert meta["data_date"] == "2026-11-13"  # oldest slice, not the newest
+        assert "nearly all" in meta["coverage_note"] and "2026-11-21" in meta["coverage_note"]
+        build_index.main(out, [a, b], expected=8)
+        meta = json.load(open(os.path.join(out, "meta.json")))
+        assert meta["coverage_pct"] == 50 and "about 50%" in meta["coverage_note"]

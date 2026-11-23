@@ -53,15 +53,25 @@ def clean_text(t: str) -> str:
 
 
 LAST_UPDATED: list[str] = []
+# Per-slice newest "Last Updated Date" and the sum of the "Number of Records" column.
+# One row can stand for several identical records, and the dashboard's total counts records, not rows.
+SLICE_NEWEST: list[str] = []
+RECORDS_SEEN = [0]
 
 
 def read_slice(path: Path):
     with open(path, encoding="utf-16", newline="") as f:
+        newest = ""
         for row in csv.DictReader(f, delimiter="\t"):
             rec = {new: clean_text(row.get(old)) for old, new in KEEP.items()}
             lu = iso(row.get("Last Updated Date") or "")
             if lu:
                 LAST_UPDATED.append(lu)
+                newest = max(newest, lu)
+            try:
+                RECORDS_SEEN[0] += max(1, int(row.get("Number of Records") or 1))
+            except ValueError:
+                RECORDS_SEEN[0] += 1
             rec["enrolled"] = iso(rec["enrolled"])
             rec["terminated"] = iso(rec["terminated"])
             rec["status"] = rec["status"].lower()  # "open" | "terminated"
@@ -73,6 +83,8 @@ def read_slice(path: Path):
                 rec["ends"] = rec.pop("terminated")
                 rec["terminated"] = ""
             yield rec
+        if newest:
+            SLICE_NEWEST.append(newest)
 
 
 # Workforce-size buckets as one-letter codes (the extension maps them back using meta.json).
@@ -137,6 +149,7 @@ def main(out_dir: str, slices: list[str], expected: int = 0) -> None:
     seen = set()
     groups = defaultdict(list)
     total_in = 0
+    LAST_UPDATED.clear(); SLICE_NEWEST.clear(); RECORDS_SEEN[0] = 0
     for p in slices:
         for rec in read_slice(Path(p)):
             total_in += 1
@@ -178,18 +191,29 @@ def main(out_dir: str, slices: list[str], expected: int = 0) -> None:
         "source": "https://www.e-verify.gov/e-verify-employer-search",
         "records_in": total_in,
         "records_unique": len(seen),
-        "data_date": max(LAST_UPDATED) if LAST_UPDATED else "",
+        "records_total": RECORDS_SEEN[0],
+        # Oldest of the slices' newest dates, so the label never claims fresher data than the oldest slice has.
+        "data_date": min(SLICE_NEWEST) if SLICE_NEWEST else "",
         "coverage_note": "Partial: some older open employers are not included yet. Not found is not a verdict.",
         "name_keys": len(index),
         "sha256": hashlib.sha256(blob.encode()).hexdigest(),
     }
     if expected:
         meta["records_expected"] = expected
-        meta["coverage_pct"] = round(100 * len(seen) / expected, 1)
-        meta["coverage_note"] = (
-            f"Covers about {meta['coverage_pct']}% of the {expected:,} employers the E-Verify dashboard lists "
-            f"(as of {meta['data_date']}). Older open employers may be missing, so not found is not a verdict."
-        )
+        # Count records (sum of "Number of Records"), not rows, and never show more than 99%: matching is by exact
+        # name, and the dashboard is a moving snapshot, so we do not claim to be complete.
+        meta["coverage_pct"] = min(99, int(100 * RECORDS_SEEN[0] / expected))
+        newest = max(SLICE_NEWEST) if SLICE_NEWEST else meta["data_date"]
+        if meta["coverage_pct"] >= 99:
+            meta["coverage_note"] = (
+                f"Covers nearly all of the employers the E-Verify dashboard lists (dashboard data from "
+                f"{meta['data_date']} to {newest}). Not found is not a verdict."
+            )
+        else:
+            meta["coverage_note"] = (
+                f"Covers about {meta['coverage_pct']}% of the {expected:,} employers the E-Verify dashboard lists "
+                f"(dashboard data from {meta['data_date']} to {newest}). Not found is not a verdict."
+            )
     (out / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print(json.dumps(meta, indent=2))
 
