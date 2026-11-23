@@ -60,7 +60,7 @@ The raw government files are not committed to the repository. The pipeline downl
 
 Version 1.0.0 is live on the Chrome Web Store. From here:
 
-- **Fresher data.** The E-Verify data is dated 2026-11-13 and is refreshed by hand, because there is no automated way to pull the full USCIS list. Keeping the data date visible matters more as it ages.
+- **Fresher data.** The E-Verify data is dated 2026-11-13 and is refreshed by hand, because the official E-Verify dashboard offers no bulk download. Keeping the data date visible matters more as it ages.
 - **An employer search page**, including "similar names" for the cases an exact match misses, so students can look up an employer without a LinkedIn post.
 - **More job sites** beyond LinkedIn.
 - **A wider audience.** The tool is useful to any F-1 student on OPT, not only STEM OPT, and the Store listing may be widened to say so.
