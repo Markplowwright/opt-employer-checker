@@ -20,8 +20,9 @@
     "button.chip.plain{padding:0 10px}",
     "button.chip:focus-visible,button.btn:focus-visible,a:focus-visible{outline:2px solid #1f5fbf;outline-offset:2px}",
     "svg{flex:none}",
-    ".pop{position:fixed;z-index:2147483000;width:300px;max-height:min(80vh,720px);overflow:auto;background:#fff;color:#1b1f24;border:1px solid #d3d8df;border-radius:16px;box-shadow:0 12px 32px rgba(20,30,50,.18),0 2px 6px rgba(20,30,50,.08)}",
-    ".hd{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;background:#f7f9fb;border-bottom:1px solid #e6e9ee;position:sticky;top:0}",
+    ".pop{position:fixed;z-index:2147483000;width:300px;max-height:min(calc(100vh - 16px),720px);overflow:auto;background:#fff;color:#1b1f24;border:1px solid #d3d8df;border-radius:16px;box-shadow:0 12px 32px rgba(20,30,50,.18),0 2px 6px rgba(20,30,50,.08)}",
+    ".hd{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;background:#f7f9fb;border-bottom:1px solid #e6e9ee;position:sticky;top:0;cursor:grab;touch-action:none;user-select:none}",
+    ".pop.drag .hd{cursor:grabbing}",
     ".hd .t{flex:1;font-size:12.5px;font-weight:600}",
     "button.x{width:32px;height:32px;border:0;background:transparent;border-radius:8px;color:#3b4450;cursor:pointer;display:flex;align-items:center;justify-content:center}",
     ".bd{display:flex;flex-direction:column;gap:14px;padding:14px}",
@@ -116,10 +117,20 @@
   }
 
   // ---- the popup ----
-  var popup = null; // {host, sr, returnTo}
+  var popup = null; // {host, sr, returnTo, cleanup}
+  var lastPos = null; // where the person last dragged the popup to; reused for the next one on this page
+  var PAD = 8;
+
+  // Keep a w x h box fully inside a vw x vh window (top-left stays visible if the box is bigger than the window).
+  function clampPos(left, top, w, h, vw, vh, pad) {
+    var p = pad == null ? PAD : pad;
+    return { left: Math.max(p, Math.min(left, vw - w - p)), top: Math.max(p, Math.min(top, vh - h - p)) };
+  }
+
   function closePopup() {
     if (!popup) return;
     var back = popup.returnTo;
+    if (popup.cleanup) popup.cleanup();
     popup.host.remove(); popup = null;
     document.removeEventListener("keydown", onKey, true);
     document.removeEventListener("mousedown", onOutside, true);
@@ -174,7 +185,7 @@
 
   function openPopup(view, anchor, summaryText) {
     closePopup();
-    var h = shadowHost();
+    var h = shadowHost(), toggleRefit = null;
     var pop = el("div", { class: "pop", role: "dialog", "aria-label": "Employer details for " + view.name });
     var closeBtn = el("button", { class: "x", "aria-label": "Close details" }, [svg("M6 6l12 12|M18 6L6 18", 16)]);
     closeBtn.addEventListener("click", closePopup);
@@ -208,6 +219,7 @@
         toggle.appendChild(svg(open ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6", 14));
         slot.textContent = "";
         if (!open) { details = detailsNode(view); slot.appendChild(details); }
+        if (toggleRefit) toggleRefit();
       });
       body.appendChild(toggle); body.appendChild(slot);
       if (SEARCH_URL) body.appendChild(el("a", { class: "btn", href: SEARCH_URL, target: "_blank", rel: "noopener" }, ["Open full search", svg("M5 12h14|M13 6l6 6-6 6", 16)]));
@@ -223,20 +235,56 @@
     h.sr.appendChild(pop);
     document.body.appendChild(h.host);
 
-    // place beside the chip, keep inside the window
-    var r = anchor.getBoundingClientRect(), w = 300, pad = 8;
+    // place beside the chip (or where the person last left it), keep inside the window
+    var r = anchor.getBoundingClientRect(), w = 300, pad = PAD;
     var left = r.right + pad + w <= window.innerWidth ? r.right + pad : (r.left - pad - w >= 0 ? r.left - pad - w : Math.max(pad, (window.innerWidth - w) / 2));
-    pop.style.left = left + "px";
-    var top = Math.min(Math.max(pad, r.top - 8), Math.max(pad, window.innerHeight - pop.offsetHeight - pad));
-    pop.style.top = top + "px";
+    var top = r.top - 8;
+    if (lastPos) { left = lastPos.left; top = lastPos.top; }
+    var cur = { left: 0, top: 0 };
+    function place(l, t) {
+      cur = clampPos(l, t, pop.offsetWidth || w, pop.offsetHeight, window.innerWidth, window.innerHeight, pad);
+      pop.style.left = cur.left + "px"; pop.style.top = cur.top + "px";
+    }
+    place(left, top);
 
-    popup = { host: h.host, returnTo: anchor };
+    // Move it by the title bar (mouse, touch or pen), or with the arrow keys on the title bar.
+    var hd = pop.firstChild, drag = null;
+    hd.setAttribute("tabindex", "0");
+    hd.setAttribute("title", "Drag to move");
+    hd.setAttribute("aria-label", "Move this window: drag, or use the arrow keys");
+    hd.addEventListener("pointerdown", function (ev) {
+      if (ev.button > 0 || (ev.target.closest && ev.target.closest("button"))) return;
+      drag = { dx: ev.clientX - cur.left, dy: ev.clientY - cur.top };
+      pop.classList.add("drag");
+      try { hd.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      ev.preventDefault();
+    });
+    hd.addEventListener("pointermove", function (ev) { if (drag) place(ev.clientX - drag.dx, ev.clientY - drag.dy); });
+    function endDrag() { if (!drag) return; drag = null; pop.classList.remove("drag"); lastPos = { left: cur.left, top: cur.top }; }
+    hd.addEventListener("pointerup", endDrag);
+    hd.addEventListener("pointercancel", endDrag);
+    hd.addEventListener("keydown", function (ev) {
+      var step = ev.shiftKey ? 64 : 16, dx = 0, dy = 0;
+      if (ev.key === "ArrowLeft") dx = -step; else if (ev.key === "ArrowRight") dx = step;
+      else if (ev.key === "ArrowUp") dy = -step; else if (ev.key === "ArrowDown") dy = step; else return;
+      ev.preventDefault(); ev.stopPropagation();
+      place(cur.left + dx, cur.top + dy); lastPos = { left: cur.left, top: cur.top };
+    });
+
+    // When it grows (Show details) or the window shrinks, pull it back inside so nothing is cut off.
+    var onResize = function () { place(cur.left, cur.top); };
+    window.addEventListener("resize", onResize);
+    var ro = typeof ResizeObserver === "function" ? new ResizeObserver(onResize) : null;
+    if (ro) ro.observe(pop);
+    toggleRefit = onResize;
+
+    popup = { host: h.host, returnTo: anchor, cleanup: function () { window.removeEventListener("resize", onResize); if (ro) ro.disconnect(); } };
     document.addEventListener("keydown", onKey, true);
     document.addEventListener("mousedown", onOutside, true);
     closeBtn.focus();
   }
 
-  var api = { createChips: createChips, openPopup: openPopup, closePopup: closePopup };
+  var api = { createChips: createChips, openPopup: openPopup, closePopup: closePopup, clampPos: clampPos };
   root.OptUI = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
