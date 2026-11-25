@@ -132,3 +132,9 @@ test("jobs home: chips go into the title's text block, not after a link that wra
   assert.equal(s1.mode, "append"); assert.equal(s1.ref.tagName, "P");
   assert.equal(OptReader.titleSlot(b.el, b.anchor).ref.tagName, "P");
 });
+
+test("cards whose location is a region name (\"Greater Richmond Region\", \"Bay Area\") are still found", () => {
+  const card = (title, loc) => '<div><img src="x"><a href="/jobs/view/' + title.length + '/">' + title + "</a><p>Wellspoken</p><p>" + loc + "</p><p>Viewed</p></div>";
+  const { document: d } = parseHTML("<html><body><div>" + card("Design Engineering Intern", "Greater Richmond Region") + card("Growth Intern", "San Francisco Bay Area") + "</div></body></html>");
+  assert.deepEqual(OptReader.readCards(d).map((c) => c.name), ["Wellspoken", "Wellspoken"]);
+});
