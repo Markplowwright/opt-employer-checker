@@ -148,6 +148,7 @@ def write_ndjson_gz(index: dict, path: Path) -> tuple[int, str]:
 def main(out_dir: str, slices: list[str], expected: int = 0) -> None:
     seen = set()
     groups = defaultdict(list)
+    aliases = []
     total_in = 0
     LAST_UPDATED.clear(); SLICE_NEWEST.clear(); RECORDS_SEEN[0] = 0
     for p in slices:
@@ -160,6 +161,22 @@ def main(out_dir: str, slices: list[str], expected: int = 0) -> None:
             key = normalize_name(rec["name"])
             if key:
                 groups[key].append(rec)
+                # E-Verify writes endings like "L.P." or "N.A." with dots, which the normalizer turns into separate
+                # letters ("bloomberg l p"), so the ending is never dropped and "Bloomberg" cannot match. Also file
+                # the record under the name with dots removed ("Bloomberg LP" -> "bloomberg"). Exact names only.
+                akey = normalize_name(rec["name"].replace(".", ""))
+                if akey and akey != key:
+                    aliases.append((akey, rec))
+
+    # Add the alias keys after all primary keys exist, so we can tell new keys from keys that already had records.
+    primary_keys = set(groups)
+    alias_new, alias_merged = set(), 0
+    for akey, rec in aliases:
+        if akey in primary_keys:
+            alias_merged += 1
+        else:
+            alias_new.add(akey)
+        groups[akey].append(rec)
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -196,6 +213,8 @@ def main(out_dir: str, slices: list[str], expected: int = 0) -> None:
         "data_date": min(SLICE_NEWEST) if SLICE_NEWEST else "",
         "coverage_note": "Partial: some older open employers are not included yet. Not found is not a verdict.",
         "name_keys": len(index),
+        "alias_new_keys": len(alias_new),
+        "alias_records_added_to_existing_keys": alias_merged,
         "sha256": hashlib.sha256(blob.encode()).hexdigest(),
     }
     if expected:

@@ -53,14 +53,15 @@ def test_write_shards_creates_every_file_and_meta(tmp_path):
         bs.split_ndjson_gz(src), str(out), "2026-11-13",
         {"built": "2026-11-17", "source": "s", "ndjson": {"sha256": "abc", "size_codes": {"a": "1 to 4"}}},
     )
-    files = sorted(p.name for p in (out / "2026-11-13").iterdir())
+    sd = out / meta["shard_path"].rstrip("/")
+    files = sorted(p.name for p in sd.iterdir())
     assert len(files) == 4096 and files[0] == "000.json"
-    assert meta["name_keys"] == 3 and meta["shard_path"] == "2026-11-13/"
+    assert meta["name_keys"] == 3 and meta["shard_path"].startswith("2026-11-13-")
     on_disk = json.loads((out / "meta.json").read_text(encoding="utf-8"))
     assert on_disk["prefix_hex"] == 3 and on_disk["ndjson_sha256"] == "abc"
-    shard = json.loads((out / "2026-11-13" / (bs.shard_prefix("acme") + ".json")).read_text(encoding="utf-8"))
+    shard = json.loads((sd / (bs.shard_prefix("acme") + ".json")).read_text(encoding="utf-8"))
     assert shard["acme"]["n"] == "Acme Inc"
-    empty = [p for p in (out / "2026-11-13").iterdir() if p.read_text() == "{}"]
+    empty = [p for p in sd.iterdir() if p.read_text() == "{}"]
     assert len(empty) >= 4000
 
 
@@ -68,10 +69,10 @@ def test_output_is_reproducible(tmp_path):
     src = tmp_path / "index.ndjson.gz"
     _ndjson(src, ROWS)
     a, b = tmp_path / "a", tmp_path / "b"
-    for d in (a, b):
-        bs.write_shards(bs.split_ndjson_gz(src), str(d), "2026-11-13", {"built": "x"})
+    metas = [bs.write_shards(bs.split_ndjson_gz(src), str(d), "2026-11-13", {"built": "x"}) for d in (a, b)]
     pa = bs.shard_prefix("zeta") + ".json"
-    assert (a / "2026-11-13" / pa).read_bytes() == (b / "2026-11-13" / pa).read_bytes()
+    assert metas[0]["shard_path"] == metas[1]["shard_path"]
+    assert (a / metas[0]["shard_path"] / pa).read_bytes() == (b / metas[1]["shard_path"] / pa).read_bytes()
 
 
 H = {"name": "H ONLY LLC", "staffing": ["consulting"], "states": ["CA"],
@@ -97,3 +98,13 @@ def test_write_shards_records_h1b_years(tmp_path):
     meta = bs.write_shards(bs.split_ndjson_gz(src), str(tmp_path / "o"), "2026-11-13", {"built": "x"},
                            h1b_meta={"years_fetched": [2024, 2025, 2026], "built": "b", "source": "s"})
     assert meta["h1b_partial_fy"] == 2026 and meta["h1b_full_fy"] == 2025
+
+
+def test_shard_folder_changes_when_content_changes_even_with_same_date(tmp_path):
+    src = tmp_path / "a.ndjson.gz"; _ndjson(src, ROWS)
+    m1 = bs.write_shards(bs.split_ndjson_gz(src), str(tmp_path / "s1"), "2026-11-13", {"ndjson": {}})
+    m2 = bs.write_shards(bs.split_ndjson_gz(src), str(tmp_path / "s2"), "2026-11-13", {"ndjson": {}})
+    assert m1["shard_path"] == m2["shard_path"]          # same content, same address
+    _ndjson(src, ROWS + [{"k": "newco", "n": "Newco", "r": [{"e": "2020-01-01"}]}])
+    m3 = bs.write_shards(bs.split_ndjson_gz(src), str(tmp_path / "s3"), "2026-11-13", {"ndjson": {}})
+    assert m3["shard_path"] != m1["shard_path"] and m3["data_date"] == m1["data_date"]

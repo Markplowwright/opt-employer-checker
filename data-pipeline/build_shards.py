@@ -72,26 +72,36 @@ def merge_h1b(shards, h1b, prefix_hex: int = PREFIX_HEX):
 
 def write_shards(shards, out_dir, data_date, build_meta, prefix_hex: int = PREFIX_HEX, h1b_meta=None):
     """Write shard files and the top-level meta.json. Returns the meta dict."""
-    shard_dir = os.path.join(out_dir, data_date)
-    os.makedirs(shard_dir, exist_ok=True)
     total_bytes = 0
     biggest = 0
     keys = 0
-    for prefix, content in shards.items():
+    encoded = []
+    digest = hashlib.sha256()
+    for prefix in sorted(shards):
+        content = shards[prefix]
         data = json.dumps(
             {k: content[k] for k in sorted(content)},
             separators=(",", ":"),
             ensure_ascii=False,
         ).encode("utf-8")
-        with open(os.path.join(shard_dir, prefix + ".json"), "wb") as f:
-            f.write(data)
+        encoded.append((prefix, data))
+        digest.update(prefix.encode() + b"\0" + data + b"\0")
         total_bytes += len(data)
         biggest = max(biggest, len(data))
         keys += len(content)
+    # The folder name changes whenever any shard's content changes (not only the data date). The extension keeps
+    # downloaded shards in the browser forever under their address, so a same-date rebuild (a fix, or a monthly
+    # H-1B refresh) must get a new address or users would keep seeing the old data.
+    version = data_date + "-" + digest.hexdigest()[:8]
+    shard_dir = os.path.join(out_dir, version)
+    os.makedirs(shard_dir, exist_ok=True)
+    for prefix, data in encoded:
+        with open(os.path.join(shard_dir, prefix + ".json"), "wb") as f:
+            f.write(data)
     meta = {
         "data_date": data_date,
         "built": build_meta.get("built"),
-        "shard_path": data_date + "/",
+        "shard_path": version + "/",
         "prefix_hex": prefix_hex,
         "shards": len(shards),
         "name_keys": keys,
