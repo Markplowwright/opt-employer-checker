@@ -37,7 +37,7 @@ The raw government files are not committed to the repository. The pipeline downl
 
 ## By the numbers
 
-- 987,714 normalized E-Verify employer names from about 1.28 million records, covering over 99% of the 1,281,054 records the E-Verify dashboard lists (dashboard data from 2026-11-13 to 2026-11-21).
+- 1,000,753 lookup names (about 987,700 normalized E-Verify employer names plus about 13,000 alternate spellings without dots, such as "Bloomberg L.P." also stored as "Bloomberg") from about 1.28 million records, covering over 99% of the 1,281,054 records the E-Verify dashboard lists (dashboard data from 2026-11-13 to 2026-11-21).
 - H-1B data from the USCIS Employer Data Hub for FY2009 to FY2026, about 376,000 employer names.
 - 4,096 shards, so a lookup downloads one small file.
 - 52 extension tests and a set of data-pipeline tests, with the build and deploy automated in GitHub Actions.
