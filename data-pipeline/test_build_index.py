@@ -105,3 +105,22 @@ def test_number_of_records_column_counts_records_and_coverage_is_capped_and_date
         build_index.main(out, [a, b], expected=8)
         meta = json.load(open(os.path.join(out, "meta.json")))
         assert meta["coverage_pct"] == 50 and "about 50%" in meta["coverage_note"]
+
+
+def test_dotted_endings_are_also_filed_under_the_dotless_name():
+    rows = [
+        ["11/13/2026", "Bloomberg L.P.", "", "Open", "No", "06/04/2008", "", "10,000 and over", "NY"],
+        ["11/13/2026", "Jasper Ridge Partners, L.P.", "", "Open", "No", "01/05/2020", "", "5 to 9", "CA"],
+        ["11/13/2026", "Zed Bank, N.A.", "", "Open", "No", "01/05/2020", "", "5 to 9", "TX"],
+        ["11/13/2026", "Plain Co", "", "Open", "No", "01/05/2020", "", "5 to 9", "TX"],
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        a = os.path.join(d, "a.csv"); write_slice(a, rows)
+        out = os.path.join(d, "out")
+        build_index.main(out, [a], expected=4)
+        idx = json.load(open(os.path.join(out, "index.json")))
+        meta = json.load(open(os.path.join(out, "meta.json")))
+    assert idx["bloomberg"]["recs"][0]["name"] == "Bloomberg L.P."
+    assert "bloomberg l p" in idx                       # the old key still works
+    assert "jasper ridge partners" in idx and "zed bank" in idx
+    assert "plain" in idx and meta["alias_new_keys"] == 3
