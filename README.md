@@ -2,7 +2,7 @@
 
 A free Chrome extension that shows **E-Verify** and **H-1B** information next to employers on LinkedIn job pages, so F-1 and STEM OPT job seekers can spot problems *before* they accept an offer.
 
-**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod)** (v1.0.0, free)
+**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod)** (v1.0.1, free)
 
 > **It cannot tell you an employer will sign an I-983.** This is not legal advice. Your DSO is the authority. Unofficial: not affiliated with DHS, USCIS, E-Verify or LinkedIn.
 
@@ -71,4 +71,4 @@ The code is [MIT licensed](LICENSE). The data comes from public U.S. government 
 
 ## Status
 
-Version 1.0.0, [live on the Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod) since 2026-11-21. LinkedIn only. Next: an employer search page, more job sites, regular data refreshes.
+Version 1.0.1, [live on the Chrome Web Store](https://chromewebstore.google.com/detail/opt-employer-checker/jcdgingcdeeghlegpohgceclekoaacod). First released 2026-11-21; 1.0.1 adds a popup you can drag by its title bar. LinkedIn only. Next: an employer search page, more job sites, regular data refreshes.
