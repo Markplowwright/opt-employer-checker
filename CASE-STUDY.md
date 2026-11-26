@@ -58,7 +58,7 @@ The raw government files are not committed to the repository. The pipeline downl
 
 ## What's next
 
-Version 1.0.0 is live on the Chrome Web Store. From here:
+Version 1.0.1 is live on the Chrome Web Store (1.0.0 was the first release, 2026-11-21). From here:
 
 - **Fresher data.** The E-Verify data is dated 2026-11-13 and is refreshed by hand, because the official E-Verify dashboard offers no bulk download. Keeping the data date visible matters more as it ages.
 - **An employer search page**, including "similar names" for the cases an exact match misses, so students can look up an employer without a LinkedIn post.
