@@ -25,13 +25,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Two jobs, as in GitHub's own Pages template: build uploads the artifact, deploy publishes it.
+  # On Nov 24 deploy-pages failed four times right after a good upload: GitHub's artifact list showed
+  # 0 artifacts (not visible yet), and on a re-run it showed 2 (the failed attempt's leftover + the new one).
+  # So: the artifact name carries the run attempt (a full re-run never sees two), "Re-run failed jobs"
+  # re-runs only deploy and reuses the one artifact, and deploy waits and tries once more by itself.
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      artifact: ${{ steps.name.outputs.artifact }}
     steps:
+      - id: name
+        run: echo "artifact=github-pages-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
@@ -90,6 +96,28 @@ jobs:
           cp extension/lib/normalize.js extension/lib/shards.js _site/lib/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
-        with: { path: _site }
+        with:
+          path: _site
+          name: ${{ steps.name.outputs.artifact }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
+    steps:
       - id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact }}
+      - name: Wait for GitHub's artifact list to catch up, then try once more
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+      - id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact }}
