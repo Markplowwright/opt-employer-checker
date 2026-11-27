@@ -13,7 +13,7 @@
   var CARD_COMPANY = ".artdeco-entity-lockup__subtitle";
   var DETAIL_COMPANY = ".job-details-jobs-unified-top-card__company-name";
   var JOB_LINK = "a[href*='currentJobId='], a[href*='/jobs/view/']";
-  var LOCATION = /\((on-site|remote|hybrid)\)|, [A-Z]{2}\b|metropolitan area|united states$/i;
+  var LOCATION = /\((on-site|remote|hybrid)\)|, [A-Z]{2}\b|metropolitan area|united states$|\b(area|region)$/i;   // also "Greater Richmond Region", "San Francisco Bay Area"
   var DOT = /^(.+?)\s+[·•]\s+(.+)$/;          // "Employer · Location" on one line (job tracker)
   var NOT_EMPLOYER = /^(premium|promoted|viewed|saved|applied|new|easy apply|actively reviewing applicants)$/i;
   var MAX_LINES = 12;                                   // a job card is short; the sidebar profile card + footer is not
