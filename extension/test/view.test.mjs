@@ -83,3 +83,62 @@ test("compact H-1B text for small card chips (full year, partial year, none)", (
   assert.equal(buildView("Equinox", found({ n: "Equinox", r: [{ e: "2021-10-28" }], h: { 2026: [1, 0] } })).h1b.mini, "H-1B 1*");
   assert.equal(buildView("Axonic", { found: false, key: "axonic", meta: META }).h1b.mini, "H-1B 0");
 });
+
+// ---- format 2 (data under /v2/) ----
+const META2 = { format: 2, data_date: "2026-11-13", coverage_pct: 99, h1b_full_fy: 2025, h1b_partial_fy: 2026 };
+const f2 = (matchKind, records, extra = {}) => ({ found: true, matchKind, key: "k", entry: { n: "Legal Name LLC", r: records }, records, h1b: null, meta: META2, ...extra });
+
+test("v2 exact + plain open record is green", () => {
+  const v = buildView("Acme", f2("exact", [{ e: "2020-01-01" }]));
+  assert.equal(v.tone, "ok"); assert.equal(v.eChip, "E-Verify: enrolled");
+});
+
+test("v2 scheduled end (after the DATA date) is amber with the date", () => {
+  const v = buildView("Zeta", f2("exact", [{ e: "2024-02-02", x: "2026-12-31" }]));
+  assert.equal(v.tone, "warn"); assert.equal(v.chip, "Enrolled, ends 2026-12-31");
+});
+
+test("v2 end date on or before the data date, or u=1, is amber 'unclear' (Truist case)", () => {
+  assert.equal(buildView("T", f2("exact", [{ e: "2020-01-01", x: "2026-11-01" }])).chip, "Enrolled, unclear");
+  const v = buildView("Truist Bank", f2("exact", [{ e: "2019-01-01", t: "2018-01-01", u: 1 }, { e: "2020-01-01", t: "2019-06-01", u: 1 }]));
+  assert.equal(v.tone, "warn"); assert.equal(v.chip, "Enrolled, unclear");
+});
+
+test("v2 any plain open record beats amber ones; ended-only is 'ended' with the new wording", () => {
+  assert.equal(buildView("A", f2("exact", [{ e: "2020-01-01", x: "2027-01-01" }, { e: "2021-01-01" }])).tone, "ok");
+  const v = buildView("Cognizant", f2("exact", [{ e: "2021-11-19", t: "2026-05-16" }]));
+  assert.equal(v.tone, "ended"); assert.match(v.note, /Other legal entities of this employer may be enrolled/);
+  assert.match(v.headline, /under this exact name ended 2026-05-16/);
+});
+
+test("v2 non-exact matches are purple, show the legal name and the legal-name note, never green", () => {
+  for (const kind of ["brand", "dots", "us", "paren"]) {
+    const v = buildView("Name", f2(kind, [{ e: "2020-01-01", n: "Legal Name Inc" }]));
+    assert.equal(v.tone, "related", kind);
+    assert.match(v.headline, /Legal Name Inc/);
+    assert.match(v.note, /offer letter or Form I-983/);
+    assert.equal(v.records[0].tone, "ok");   // each related record keeps its own status
+  }
+});
+
+test("v2 related records show their OWN status (an ended record stays ended)", () => {
+  const v = buildView("Capgemini", f2("brand", [{ e: "2020-01-01", t: "2022-01-01", n: "Capgemini America Inc" }]));
+  assert.equal(v.tone, "related"); assert.equal(v.records[0].tone, "ended");
+});
+
+test("v2 H-1B: shown for exact, dots and brand matches (from the name's own entry); hidden for us/paren fallbacks", () => {
+  const h = { n: "Legal", r: [], h: { 2025: [12, 0, 3] } };
+  assert.equal(buildView("Legal", f2("exact", [{ e: "2020-01-01" }], { h1b: h })).h1b.chip, "H-1B: 12 · FY2025");
+  assert.equal(buildView("Legal", f2("brand", [{ e: "2020-01-01", n: "X" }], { h1b: h })).h1b.chip, "H-1B: 12 · FY2025");
+  assert.equal(buildView("Legal", f2("us", [{ e: "2020-01-01" }], { h1b: h })).h1b.available, false);
+});
+
+test("v2 not found is not a verdict; H-1B-only company still shows its H-1B", () => {
+  const v = buildView("Axonic", { found: false, key: "axonic", h1b: { n: "Axonic", r: [], h: { 2025: [5, 0, 1] } }, meta: META2 });
+  assert.equal(v.tone, "none"); assert.match(v.note, /Not found is not a verdict/); assert.equal(v.h1b.chip, "H-1B: 5 · FY2025");
+});
+
+test("v2 a name with no usable letters is 'couldn't check', never 'not found'", () => {
+  const v = buildView("株式会社ソニー", { unsupported: true, key: "", meta: META2 });
+  assert.equal(v.tone, "error"); assert.equal(v.chip, "Couldn’t check"); assert.doesNotMatch(v.headline + v.note, /Not found/);
+});

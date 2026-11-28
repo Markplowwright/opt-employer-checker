@@ -1,13 +1,15 @@
 // Looks up employers for the content script. Runs in the service worker so the memory cache is shared by all tabs
 // and the disk cache (Cache Storage) survives restarts. Only a short hash prefix leaves the browser, never the name.
-import { createShardClient } from "./lib/shards.js";
+import { createShardClient2 } from "./lib/shards2.js";
 
-const BASE = "https://markplowwright.github.io/opt-employer-checker/";
+const BASE = "https://markplowwright.github.io/opt-employer-checker/";   // About page and privacy policy
+const DATA = BASE + "v2/";                                               // format-2 data; the root tree is format 1, kept for older versions
 let clientPromise = null;
 
 function getClient() {
   if (!clientPromise) {
-    clientPromise = caches.open("opt-shards-v1").then((cache) => createShardClient({ base: BASE, cache }));
+    caches.delete("opt-shards-v1").catch(() => {});   // format-1 shards from earlier versions; no longer used
+    clientPromise = caches.open("opt-shards-v2").then((cache) => createShardClient2({ base: DATA, cache }));
   }
   return clientPromise;
 }

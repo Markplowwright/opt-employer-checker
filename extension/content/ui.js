@@ -2,8 +2,8 @@
 // inside shadow roots so LinkedIn's styles cannot change how it looks and ours cannot leak into the page.
 (function (root) {
   var SVG = "http://www.w3.org/2000/svg";
-  var TONES = { ok: ["#e1f3e8", "#0d5c33"], ended: ["#fcefd2", "#7a4300"], none: ["#e9ecf0", "#3b4450"], error: ["#fbe3df", "#8a1f11"], busy: ["#eef1f5", "#5a6472"] };
-  var ICON = { ok: "M8 12.5l2.8 2.8L16 9.5", ended: "M12 7.5V12l3 2", none: "M8.5 12h7", error: "M12 7.5v5M12 15.8v.4", busy: "M8.5 12h7" };
+  var TONES = { ok: ["#e1f3e8", "#0d5c33"], ended: ["#fcefd2", "#7a4300"], none: ["#e9ecf0", "#3b4450"], error: ["#fbe3df", "#8a1f11"], busy: ["#eef1f5", "#5a6472"], warn: ["#fff1b8", "#5c4500"], related: ["#ece7fb", "#4b2a99"] };
+  var ICON = { ok: "M8 12.5l2.8 2.8L16 9.5", ended: "M12 7.5V12l3 2", none: "M8.5 12h7", error: "M12 7.5v5M12 15.8v.4", busy: "M8.5 12h7", warn: "M12 7.5v5M12 15.8v.4", related: "M12 8.6a3.4 3.4 0 1 0 0 6.8a3.4 3.4 0 1 0 0-6.8z" };
   var SEARCH_URL = null; // set to the search page address when that page exists; the button stays hidden until then
 
   var CSS = [
@@ -156,7 +156,7 @@
     if (v.records.length) {
       var list = el("div", { class: "recs" });
       v.records.forEach(function (r) {
-        var tc = r.open ? TONES.ok : TONES.ended;
+        var tc = r.tone ? TONES[r.tone] : (r.open ? TONES.ok : TONES.ended);
         list.appendChild(el("div", { class: "rec" }, [
           el("div", null, [el("div", { class: "a", text: "Enrolled " + r.enrolled }), r.meta ? el("div", { class: "sm", text: r.meta }) : null]),
           el("div", { class: "tag", text: r.tag, style: "background:" + tc[0] + ";color:" + tc[1] })
@@ -196,7 +196,7 @@
     body.appendChild(el("div", { style: "display:flex;flex-direction:column;gap:4px" }, [
       el("div", { class: "lbl", text: "Employer on this page" }),
       el("div", { class: "emp", text: view.name }),
-      el("div", { class: "sm", text: (view.tone === "none" || view.tone === "error" ? "Searched for: " : "Exact name match: ") + view.key })
+      el("div", { class: "sm", text: (view.tone === "none" || view.tone === "error" ? "Searched for: " : view.tone === "related" ? "Closest match: " : "Exact name match: ") + view.key })
     ]));
     var vb = el("div", { style: "display:flex;flex-direction:column;gap:8px" }, [
       el("div", { class: "vchip", style: "background:" + t[0] + ";color:" + t[1] }, [circleIcon(view.tone, 16), view.chip]),
