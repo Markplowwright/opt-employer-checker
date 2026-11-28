@@ -9,7 +9,15 @@
   // A record is open when the dashboard lists no end date, or says Open although an earlier end date exists (u=1).
   function isOpen(r) { return !r.t || !!r.u; }
 
-  function recordRows(recs, head) {
+  // Format 2 status of one record against the DATA date (not today): open | scheduled (future end) | unclear (open, end date passed) | ended.
+  function recState(r, dataDate) {
+    if (r.t && !r.u) return "ended";
+    if (r.u) return "unclear";
+    if (r.x) return !dataDate || r.x > dataDate ? "scheduled" : "unclear";
+    return "open";
+  }
+
+  function recordRows(recs, head, dataDate) {
     return recs.map(function (r) {
       var meta = [];
       if (r.s) meta.push(r.s.split(",").length > 6 ? r.s.split(",").slice(0, 6).join(", ") + " +" + (r.s.split(",").length - 6) : r.s.split(",").join(", "));
@@ -17,7 +25,9 @@
       if (r.n && r.n !== head) meta.push('as "' + r.n + '"');
       if (r.u) meta.push("an earlier end date is also listed");
       var tag = !isOpen(r) ? "Ended " + r.t : (r.x ? "Ends " + r.x : "Open");
-      return { enrolled: r.e || "", meta: meta.join(" · "), tag: tag, open: isOpen(r) };
+      var st = recState(r, dataDate), tone = st === "open" ? "ok" : st === "ended" ? "ended" : "warn";
+      if (dataDate && st === "unclear") tag = "Unclear";
+      return { enrolled: r.e || "", meta: meta.join(" · "), tag: tag, open: isOpen(r), tone: tone, state: st };
     }).sort(function (a, b) { return a.open === b.open ? (a.enrolled < b.enrolled ? 1 : -1) : (a.open ? -1 : 1); });
   }
 
@@ -45,7 +55,66 @@
     return { available: true, chip: chip, mini: mini, aria: aria, bars: bars, note: note, short: short };
   }
 
+  var LEGAL_NOTE = "This is a lead, not a confirmed match. Check the legal employer name on your offer letter or Form I-983.";
+  var KIND_HEAD = {
+    brand: function (n) { return "Brand match: E-Verify lists this employer as \u201c" + n + "\u201d."; },
+    dots: function (n) { return "Same name apart from punctuation. E-Verify lists \u201c" + n + "\u201d."; },
+    us: function (n) { return "Same name without \u201cUS\u201d. E-Verify lists \u201c" + n + "\u201d."; },
+    paren: function (n) { return "Matched without, or inside, the brackets. E-Verify lists \u201c" + n + "\u201d."; }
+  };
+
+  // Format-2 results (see lib/shards2.js). Green only for an exact name; everything else is a lead (purple).
+  function buildView2(name, result) {
+    var meta = result.meta || {}, date = meta.data_date || "";
+    if (result.unsupported) {
+      return { name: name, key: "", tone: "error", chip: "Couldn\u2019t check", eChip: "E-Verify: couldn\u2019t check", eAria: "E-Verify: couldn\u2019t check this name",
+        headline: "We can\u2019t look this name up.", note: "The name has no Latin letters or digits, so it cannot be matched. This does not mean the employer is not enrolled.",
+        records: [], h1b: { available: false }, staffing: "", dataDate: date, searchedFor: "" };
+    }
+    var h1bEntry = result.h1b || null;
+    var kind = result.found ? result.matchKind : null;
+    var h1b = (kind === "us" || kind === "paren") ? { available: false } : h1bView(h1bEntry, meta);
+    var entry = result.found ? result.entry : null;
+    var recs = result.found ? result.records : [];
+    var legal = (recs[0] && recs[0].n) || (entry && entry.n) || name;
+    var staffing = entry && entry.f && entry.f.length
+      ? 'The name contains "' + entry.f[0] + '", a weak hint. A W-2 staffing employer can sign an I-983 only if it is enrolled and provides and supervises your training itself.' : "";
+    var base = { name: name, key: result.key, records: recordRows(recs, entry && entry.n, date), h1b: h1b, staffing: staffing, dataDate: date, displayName: legal, matchKind: kind };
+    if (!result.found) {
+      return Object.assign(base, { tone: "none", chip: "Not found", eChip: "E-Verify: not found", eAria: "E-Verify: not found in our data",
+        headline: "No match in our E-Verify data.",
+        note: "Not found is not a verdict. Our data covers about " + (meta.coverage_pct || 77) + "% of E-Verify employers and the employer may use another legal name. Ask the employer for their E-Verify company ID." });
+    }
+    if (kind !== "exact") {
+      var n = recs.length;
+      return Object.assign(base, { tone: "related", chip: "Related name", eChip: "E-Verify: related name" + (n > 1 ? "s (" + n + ")" : ""),
+        eAria: "E-Verify: a related name is enrolled, not an exact match", headline: KIND_HEAD[kind](legal), note: LEGAL_NOTE });
+    }
+    var states = recs.map(function (r) { return recState(r, date); });
+    var has = function (x) { return states.indexOf(x) >= 0; };
+    if (has("open")) {
+      var latest = recs.filter(function (r, i) { return states[i] === "open"; }).map(function (r) { return r.e || ""; }).sort().pop();
+      var ended = states.filter(function (x) { return x === "ended"; }).length;
+      return Object.assign(base, { tone: "ok", chip: "Enrolled", eChip: "E-Verify: enrolled", eAria: "E-Verify: enrolled", headline: "Enrolled, no end date listed.",
+        note: "An enrollment started " + latest + " is open." + (ended ? " " + ended + " earlier " + (ended === 1 ? "enrollment has" : "enrollments have") + " ended." : "") });
+    }
+    if (has("scheduled")) {
+      var ends = recs.filter(function (r, i) { return states[i] === "scheduled"; }).map(function (r) { return r.x; }).sort()[0];
+      return Object.assign(base, { tone: "warn", chip: "Enrolled, ends " + ends, eChip: "E-Verify: enrolled, ends " + ends, eAria: "E-Verify: enrolled, with an end date of " + ends,
+        headline: "Enrolled, with an end date listed: " + ends + ".", note: "The dashboard lists this enrollment as open with a future end date. Ask the employer whether it will continue." });
+    }
+    if (has("unclear")) {
+      return Object.assign(base, { tone: "warn", chip: "Enrolled, unclear", eChip: "E-Verify: enrolled, unclear", eAria: "E-Verify: listed as open, but an end date has passed",
+        headline: "Listed as open, but an end date has passed.", note: "The dashboard says Open and also lists an end date that is already past, so the status is unclear. Ask the employer for their E-Verify company ID." });
+    }
+    var lastEnd = recs.map(function (r) { return r.t; }).sort().pop();
+    return Object.assign(base, { tone: "ended", chip: "Enrollment ended", eChip: "E-Verify: this name ended", eAria: "E-Verify: enrollment under this exact name ended",
+      headline: (recs.length === 1 ? "The only enrollment under this exact name ended " : "The latest enrollment under this exact name ended ") + lastEnd + ".",
+      note: "Other legal entities of this employer may be enrolled, so check the legal employer name. Our data covers about " + (meta.coverage_pct || 77) + "% of E-Verify employers." });
+  }
+
   function buildView(name, result) {
+    if (result && !result.error && (result.unsupported || result.matchKind || (result.meta && result.meta.format === 2))) return buildView2(name, result);
     var date = (result && result.meta && result.meta.data_date) || "";
     if (!result || result.error) {
       return { name: name, key: result && result.key || "", tone: "error", chip: "Couldn’t check",

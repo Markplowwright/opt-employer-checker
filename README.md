@@ -55,7 +55,7 @@ To run it from source instead (for development): clone this repo, open `chrome:/
 ## Develop
 
     cd extension && npm install && npm test      # extension tests (node:test)
-    cd data-pipeline && python3 -m unittest      # pipeline tests
+    cd data-pipeline && python3 -m pip install pytest && python3 -m pytest   # pipeline tests (plain unittest finds only some of them)
 
 ## Layout
 
