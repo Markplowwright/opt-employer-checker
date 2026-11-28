@@ -4,13 +4,15 @@
 // lookupName(raw) returns one of
 //   { unsupported: true, key: "" , meta }                       the name has no usable letters or digits -> "couldn't check"
 //   { found: false, key, h1b, meta }                            no E-Verify records under any key tried (h1b may still exist)
-//   { found: true, matchKind, key, entry, records, h1b, meta }  matchKind: exact | dots | brand | us | paren
+//   { found: true, matchKind, key, entry, records, h1b, h1bVia?, meta }  matchKind: exact | dots | brand | us | paren | part
+//   h1b is the name's own entry when it has H-1B data. For a us/paren/part match with none of its own, it is the matched entry's
+//   H-1B data and h1bVia is set (the view says the counts are under the related name).
 // Green is possible only for "exact". Every other kind is a lead and is shown purple with the legal name.
 import { canonKey, strictKey, dropUs } from "./normalize2.js";
 import { shardPrefix } from "./shards.js";
 
 export const FORMAT = 2;
-export const MAX_KEYS_PER_NAME = 4;   // primary + us/usa + two parenthetical keys; caps the shard requests for a miss
+export const MAX_KEYS_PER_NAME = 4;   // primary + us/usa + parenthetical keys + comma parts, in that order; caps the shard requests for a miss
 
 export function candidateKeys(raw) {
   const k1 = canonKey(raw);
@@ -26,6 +28,14 @@ export function candidateKeys(raw) {
     const m = s.match(/\(([^)]*)\)/);
     const inside = m ? canonKey(m[1]) : "";
     if (inside && inside !== k1 && inside !== dropped) out.push({ key: inside, kind: "paren" });
+  }
+  // "Penn Medicine, University of Pennsylvania Health System": try each comma part that has two or more words.
+  // Single words are skipped on purpose ("Smith, Boston" must not look up "boston").
+  if (s.includes(",")) {
+    for (const piece of s.split(",")) {
+      const k = canonKey(piece);
+      if (k && k !== k1 && k.includes(" ") && !out.some((o) => o.key === k)) out.push({ key: k, kind: "part" });
+    }
   }
   return out.slice(0, MAX_KEYS_PER_NAME);
 }
@@ -82,13 +92,16 @@ export function createShardClient2({ base, fetchImpl = (...a) => fetch(...a), ca
     const cands = candidateKeys(raw);
     if (!cands.length) return { unsupported: true, key: "", meta };
     const primary = await entryFor(cands[0].key);
-    const h1b = primary && primary.h ? primary : null;      // H-1B only from the name itself, never from a fallback
+    const h1b = primary && primary.h ? primary : null;      // the name's own H-1B data; a fallback's is added below, labeled
     const strict = strictKey(raw);
     for (let i = 0; i < cands.length; i++) {
       const { key, kind } = cands[i];
       const entry = i === 0 ? primary : await entryFor(key);
       if (!entry || !entry.r || !entry.r.length) continue;
-      if (kind !== "primary") return { found: true, matchKind: kind, key, entry, records: entry.r, h1b, meta };
+      if (kind !== "primary") {
+        const via = !h1b && entry.h;     // the related name carries the H-1B data: show it, but say whose it is
+        return { found: true, matchKind: kind, key, entry, records: entry.r, h1b: via ? entry : h1b, h1bVia: via ? key : null, meta };
+      }
       if (entry.b) return { found: true, matchKind: "brand", key, entry, records: entry.r, h1b, meta };
       const exact = entry.r.filter((r) => (r.sk || key) === strict);
       if (exact.length) return { found: true, matchKind: "exact", key, entry, records: exact, h1b, meta };

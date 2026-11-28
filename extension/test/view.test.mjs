@@ -112,7 +112,7 @@ test("v2 any plain open record beats amber ones; ended-only is 'ended' with the 
 });
 
 test("v2 non-exact matches are purple, show the legal name and the legal-name note, never green", () => {
-  for (const kind of ["brand", "dots", "us", "paren"]) {
+  for (const kind of ["brand", "dots", "us", "paren", "part"]) {
     const v = buildView("Name", f2(kind, [{ e: "2020-01-01", n: "Legal Name Inc" }]));
     assert.equal(v.tone, "related", kind);
     assert.match(v.headline, /Legal Name Inc/);
@@ -126,11 +126,17 @@ test("v2 related records show their OWN status (an ended record stays ended)", (
   assert.equal(v.tone, "related"); assert.equal(v.records[0].tone, "ended");
 });
 
-test("v2 H-1B: shown for exact, dots and brand matches (from the name's own entry); hidden for us/paren fallbacks", () => {
+test("v2 H-1B: shown for exact, dots and brand; for us/paren/part matches it is the related entry's, labeled as such", () => {
   const h = { n: "Legal", r: [], h: { 2025: [12, 0, 3] } };
   assert.equal(buildView("Legal", f2("exact", [{ e: "2020-01-01" }], { h1b: h })).h1b.chip, "H-1B: 12 · FY2025");
   assert.equal(buildView("Legal", f2("brand", [{ e: "2020-01-01", n: "X" }], { h1b: h })).h1b.chip, "H-1B: 12 · FY2025");
-  assert.equal(buildView("Legal", f2("us", [{ e: "2020-01-01" }], { h1b: h })).h1b.available, false);
+  assert.equal(buildView("Legal", f2("brand", [{ e: "2020-01-01", n: "X" }], { h1b: h })).h1b.scope, "exact name only");
+  for (const kind of ["us", "paren", "part"]) {
+    const v = buildView("KPMG US", f2(kind, [{ e: "2020-01-01" }], { h1b: h, h1bVia: "legal" }));
+    assert.equal(v.h1b.chip, "H-1B: 12 · FY2025", kind); assert.equal(v.h1b.scope, "related name");
+    assert.match(v.h1b.note, /Counted under the related name .Legal., not under .KPMG US./); assert.match(v.h1b.aria, /related name/);
+  }
+  assert.equal(buildView("KPMG US", f2("us", [{ e: "2020-01-01" }], { h1b: null })).h1b.chip, "H-1B: none found");
 });
 
 test("v2 not found is not a verdict; H-1B-only company still shows its H-1B", () => {
