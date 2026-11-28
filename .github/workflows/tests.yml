@@ -21,7 +21,9 @@ jobs:
           python-version: "3.12"
       - name: Extension tests
         working-directory: extension
-        run: npm test
+        run: |
+          npm ci
+          npm test
       - name: Pipeline tests
         working-directory: data-pipeline
         run: |
