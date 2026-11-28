@@ -25,7 +25,7 @@ a{color:#1d4f91}
 .note{background:#f6f1e4;border:1px solid #e4d7b5;border-radius:10px;padding:.8rem 1rem;margin:1.2rem 0}
 .chip{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:999px;font-size:.78rem;font-weight:600;white-space:nowrap}
 .chip svg{margin-left:-4px}
-.chip.h{background:#e6edfa;color:#1b3a80}.chip.ok{background:#e1f3e8;color:#0d5c33}.chip.ended{background:#fcefd2;color:#7a4300}.chip.none{background:#e9ecf0;color:#3b4450}.chip.error{background:#fbe3df;color:#8a1f11}
+.chip.h{background:#e6edfa;color:#1b3a80}.chip.ok{background:#e1f3e8;color:#0d5c33}.chip.ended{background:#fcefd2;color:#7a4300}.chip.none{background:#e9ecf0;color:#3b4450}.chip.warn{background:#fff1b8;color:#5c4500}.chip.related{background:#ece7fb;color:#4b2a99}.chip.error{background:#fbe3df;color:#8a1f11}
 h3{font-size:1rem;margin:1.2rem 0 .2rem}
 .chipdoc dt{margin-top:.9rem}.chipdoc dd{margin-top:.35rem}
 .sm{font-size:.88rem;color:var(--muted)}
@@ -66,10 +66,14 @@ code{background:#f1f3f6;padding:.05rem .3rem;border-radius:4px;font-size:.9em}
   <dl class="chipdoc">
     <dt><span class="chip ok"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/></svg>E-Verify: enrolled</span></dt>
     <dd>The employer has an open E-Verify enrollment on file. Click the chip to see when it started and whether an end date is listed.</dd>
+    <dt><span class="chip warn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 15.8v.4"/></svg>E-Verify: enrolled, ends 2026-12-01</span></dt>
+    <dd>Amber: enrolled under this exact name, but look closer. Either the dashboard lists an end date that is still ahead, or it says Open although an end date has passed ("enrolled, unclear"). Ask the employer for their E-Verify company ID.</dd>
+    <dt><span class="chip related"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>E-Verify: related name</span></dt>
+    <dd>Purple: not an exact match, but a related name is enrolled, for example the legal name behind a brand, or the same name without "US" or inside brackets. <strong>This is a lead, not a confirmed match.</strong> Click the chip to see the legal name and each enrollment's own status, then check the legal employer name on your offer letter or Form I-983.</dd>
     <dt><span class="chip ended"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>E-Verify: ended</span></dt>
-    <dd>We only have enrollments that have ended. No current one is in our data, but one could be missing.</dd>
+    <dd>Every enrollment under this exact name has ended. Other legal entities of this employer may still be enrolled, so check the legal employer name.</dd>
     <dt><span class="chip none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12h7"/></svg>E-Verify: not found</span></dt>
-    <dd>The name was not in our data. <strong>"Not found" is not a verdict.</strong> It does not mean the employer is not enrolled. Names must match exactly after normalizing, so a similar-looking name is never shown as a match. Ask the employer for their E-Verify company ID.</dd>
+    <dd>The name was not in our data. <strong>"Not found" is not a verdict.</strong> It does not mean the employer is not enrolled. Green needs an exact name match after normalizing; related names show purple instead. The employer may use a different legal name. Ask the employer for their E-Verify company ID.</dd>
     <dt><span class="chip error"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 15.8v.4"/></svg>E-Verify: couldn’t check</span></dt>
     <dd>The data could not be loaded, for example because you are offline. It never means "not enrolled". Try again.</dd>
   </dl>
@@ -83,7 +87,9 @@ code{background:#f1f3f6;padding:.05rem .3rem;border-radius:4px;font-size:.9em}
     <dt><span class="chip h">H-1B: 0 · FY2025</span></dt>
     <dd>The employer appears in the data, but with no approved petitions that year.</dd>
     <dt><span class="chip h">H-1B: none found</span></dt>
-    <dd>No H-1B records under this exact name. Spelling variants are not merged.</dd>
+    <dd>No H-1B records under this exact name. Spelling variants are not merged. That does not mean the employer will not sponsor.</dd>
+    <dt><span class="chip h">H-1B: 294 · FY2025</span> <span class="sm">on a purple match</span></dt>
+    <dd>On a related-name match the count belongs to the related name, and the panel says so. H-1B numbers cover the whole employer, not your role, and past filings do not promise future sponsorship.</dd>
   </dl>
   <p class="sm">On crowded LinkedIn lists the chips are shorter (for example "E-Verify" and "H-1B 12") so they fit on the card. Open the chip for the full wording.</p>
 
@@ -98,7 +104,7 @@ code{background:#f1f3f6;padding:.05rem .3rem;border-radius:4px;font-size:.9em}
   <h2>Privacy</h2>
   <ul>
     <li>The extension reads the company name shown on the LinkedIn job page you are viewing, inside your browser. It only runs on linkedin.com.</li>
-    <li>Company names never leave your browser. The name is normalized and hashed on your computer, and only the first 3 characters of the hash are used to request a data file. That file is shared by hundreds of employers, so the data site cannot tell which employer you looked at.</li>
+    <li>Company names never leave your browser. The name is normalized and hashed on your computer, and only the first 3 characters of a hash are used to request a data file. A name can need up to four such requests (for example without "US", or the part inside brackets). Each file is shared by hundreds of employers, so the data site cannot tell which employer you looked at.</li>
     <li>The data files are static files hosted on GitHub Pages. Like any website, GitHub can see your IP address and which data file was requested. We do not run a server, an account system, analytics, advertising or tracking, and we do not collect, sell or share personal data.</li>
     <li>Downloaded data files are kept in your browser's own cache so lookups are fast. They contain public employer data only. Nothing about you or your searches is stored.</li>
     <li>The extension asks for no browser permissions beyond reading LinkedIn pages and fetching these data files.</li>

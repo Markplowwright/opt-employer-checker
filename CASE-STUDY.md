@@ -18,13 +18,13 @@ It deliberately cannot say whether an employer will sign an I-983. The panel say
 
 **1. A wrong answer is worse than no answer.**
 An "OK" on the wrong company could cost someone a job or their status, so the rules are strict:
-- A match must be an **exact name match after normalizing** the name (case, accents, punctuation, and trailing legal suffixes such as "Inc" or "LLC"). There is no fuzzy matching, and nothing ever shows green on a near match.
+- Green requires an **exact name match after normalizing** the name (case, accents, punctuation, "&" and "and", and trailing legal suffixes such as "Inc" or "LLC"). There is no fuzzy matching. A related name (a brand match, a name that differs only by punctuation, a match without "US" or inside brackets) is shown in a separate purple state with the legal name and a reminder to check it. Nothing ever shows green on a near match, and a related company's status is never copied to another company.
 - "Not found" is never shown as a "no". Our data covers over 99% of what the E-Verify dashboard lists, but not all of it (for example, an employer listed under a different legal name), so the chip says "not found" and the panel explains that this is not a verdict.
 - If the data can't be loaded, the chip says "couldn't check", never "not enrolled".
 - The data date and the source link are always visible, because the data ages.
 
 **2. Privacy by design: the company name never leaves the browser.**
-The simple version sends the employer name to a server for lookup, which would also tell that server what jobs the student is looking at. Instead, the extension hashes the normalized name locally and requests only the first 3 hex characters of the hash. That selects one of 4,096 static data files ("shards"), each holding about 190 employers on average, so the host can't tell which employer was looked up. There are no accounts, no analytics and no server of my own.
+The simple version sends the employer name to a server for lookup, which would also tell that server what jobs the student is looking at. Instead, the extension hashes the normalized name locally and requests only the first 3 hex characters of a hash (a name can need up to four of these requests for the fallbacks). That selects one of 4,096 static data files ("shards"), each holding about 190 employers on average, so the host can't tell which employer was looked up. There are no accounts, no analytics and no server of my own.
 
 **3. Free to run, forever.**
 The shards are static files, so GitHub Pages hosts them at no cost, with no database or backend to maintain. They sit under a versioned path (`<data_date>/<prefix>.json`) so browsers can cache them indefinitely, and a small `meta.json` points to the current version. A GitHub Actions workflow builds and publishes them, with safety checks that refuse to publish a thin or mismatched dataset (it verifies a checksum of the download and a minimum number of keys and shards).
@@ -46,7 +46,7 @@ The raw government files are not committed to the repository. The pipeline downl
 ## What I'd say about the limits
 
 - Coverage is over 99%, not 100%. Employers missing from the data show as "not found", and the interface is designed around that.
-- Names are matched exactly. An employer filed under a slightly different legal name won't match. That is a deliberate trade: a missed match is safer than a wrong one.
+- Green is exact only. An employer filed under a different legal name shows as a purple lead at best, or "not found". That is a deliberate trade: a missed match is safer than a wrong one.
 - Some E-Verify enrollments cover only federal-contract work, so an enrollment on file may not apply to the job.
 - It only works on LinkedIn, and LinkedIn can break it. The fixtures tell me quickly when it does.
 
@@ -61,7 +61,7 @@ The raw government files are not committed to the repository. The pipeline downl
 Version 1.0.1 is live on the Chrome Web Store (1.0.0 was the first release, 2026-11-21). From here:
 
 - **Fresher data.** The E-Verify data is dated 2026-11-13 and is refreshed by hand, because the official E-Verify dashboard offers no bulk download. Keeping the data date visible matters more as it ages.
-- **An employer search page**, including "similar names" for the cases an exact match misses, so students can look up an employer without a LinkedIn post.
+- **An employer search page**, including "similar names" for the cases the current matching misses, so students can look up an employer without a LinkedIn post.
 - **More job sites** beyond LinkedIn.
 - **A wider audience.** The tool is useful to any F-1 student on OPT, not only STEM OPT, and the Store listing may be widened to say so.
 

@@ -26,14 +26,15 @@ Click a chip for the details: enrollment dates, a few years of H-1B history, the
 
 ## Rules the extension follows
 
-- A match must be an **exact name match after normalizing**. A similar-looking name is never shown as a match, and it never shows green on a fuzzy match.
+- **Green only for an exact name match** after normalizing (case, accents, punctuation, "&" and "and", "The", trailing Inc/LLC and similar). Anything else is a lead and is shown **purple** with the legal name: a brand (DBA) match, a name that differs only by punctuation, a match without a trailing "US", a match without or inside brackets, or one part of a name split at a comma. A related name's own status is shown, never copied to another company.
+- **Amber** means enrolled but look closer: the dashboard lists an end date that is still in the future, or the record says open although an end date has passed.
 - "Not found" and "couldn't check" are always shown as such, never as a "no".
 - The data date and a source link are always visible.
 - Some E-Verify enrollments cover only federal-contract work, and the panel says so.
 
 ## Privacy
 
-- Company names **never leave your browser**. The name is normalized and hashed locally, and only the first 3 hex characters of the hash are requested (one of 4,096 shard files shared by hundreds of employers), so the data host cannot tell which employer you looked at.
+- Company names **never leave your browser**. The name is normalized and hashed locally, and only the first 3 hex characters of a hash are requested (one of 4,096 shard files shared by hundreds of employers; up to four such requests per name, for the fallbacks above), so the data host cannot tell which employer you looked at.
 - No server, accounts, analytics or tracking. The data is static files on GitHub Pages; like any website, GitHub can see your IP address and which shard was requested.
 - Downloaded shards are kept in the browser's own cache so lookups are fast.
 - The extension only runs on linkedin.com and only talks to this project's data site.

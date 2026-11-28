@@ -15,20 +15,20 @@ E-Verify and H-1B info next to employers on LinkedIn job pages. Free, private an
 
 OPT Employer Checker adds two small chips next to the employer on LinkedIn job pages, so F-1 and STEM OPT job seekers can take a first look at an employer before applying.
 
-• E-Verify chip: enrolled, enrollment ended, not found, or couldn't check.
+• E-Verify chip: enrolled (green), enrolled but ends soon or unclear (amber), a related name (purple), name ended, not found, or couldn't check.
 • H-1B chip: how many H-1B petitions were approved for the employer in the latest full fiscal year.
 
 Click a chip for the details: enrollment dates, a few years of H-1B history, the data date, and links to the official sources.
 
 HONEST BY DESIGN
-• Exact name matches only. A similar-looking name is never shown as a match.
+• Green means an exact name match. A related name, such as the legal name behind a brand, is shown in purple with the legal name and a reminder to check it on your offer letter or Form I-983. It is never shown as green.
 • "Not found" is not a verdict. The E-Verify data covers over 99% of what the E-Verify dashboard lists, so an enrolled employer can still be missing.
 • If the data can't be loaded, the chip says "couldn't check", never "not enrolled".
 • The data date and a source link are always shown.
 • Some E-Verify enrollments cover only federal-contract work, and the panel says so.
 
 PRIVATE
-• Company names never leave your browser. The name is hashed on your computer and only the first 3 characters of the hash are used to request a small public data file.
+• Company names never leave your browser. The name is hashed on your computer and only the first 3 characters of a hash are used to request a small public data file. A name can need up to four of these requests (for example without "US", or the part inside brackets).
 • No accounts, no analytics, no ads, no tracking.
 
 IMPORTANT
