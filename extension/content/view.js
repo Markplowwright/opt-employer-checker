@@ -52,7 +52,7 @@
       : "All years since FY" + firstYear + ": " + fmt(all) + ". *FY" + part + " is partial.";
     var short = !h ? "" : fullN > 0 ? "H-1B FY" + full + ": " + fmt(fullN) : partN > 0 ? "H-1B FY" + part + "*: " + fmt(partN) : "H-1B FY" + full + ": 0";
     var mini = !h ? "H-1B 0" : fullN > 0 ? "H-1B " + fmt(fullN) : partN > 0 ? "H-1B " + fmt(partN) + "*" : "H-1B 0";
-    return { available: true, chip: chip, mini: mini, aria: aria, bars: bars, note: note, short: short };
+    return { available: true, chip: chip, mini: mini, aria: aria, bars: bars, note: note, short: short, scope: "exact name only" };
   }
 
   var LEGAL_NOTE = "This is a lead, not a confirmed match. Check the legal employer name on your offer letter or Form I-983.";
@@ -60,7 +60,8 @@
     brand: function (n) { return "Brand match: E-Verify lists this employer as \u201c" + n + "\u201d."; },
     dots: function (n) { return "Same name apart from punctuation. E-Verify lists \u201c" + n + "\u201d."; },
     us: function (n) { return "Same name without \u201cUS\u201d. E-Verify lists \u201c" + n + "\u201d."; },
-    paren: function (n) { return "Matched without, or inside, the brackets. E-Verify lists \u201c" + n + "\u201d."; }
+    paren: function (n) { return "Matched without, or inside, the brackets. E-Verify lists \u201c" + n + "\u201d."; },
+    part: function (n) { return "Matched one part of the name, split at a comma. E-Verify lists \u201c" + n + "\u201d."; }
   };
 
   // Format-2 results (see lib/shards2.js). Green only for an exact name; everything else is a lead (purple).
@@ -73,10 +74,15 @@
     }
     var h1bEntry = result.h1b || null;
     var kind = result.found ? result.matchKind : null;
-    var h1b = (kind === "us" || kind === "paren") ? { available: false } : h1bView(h1bEntry, meta);
+    var h1b = h1bView(h1bEntry, meta);
     var entry = result.found ? result.entry : null;
     var recs = result.found ? result.records : [];
     var legal = (recs[0] && recs[0].n) || (entry && entry.n) || name;
+    if (result.h1bVia && h1b.available) {   // the counts belong to the related name, not to the name on the page
+      h1b.scope = "related name";
+      h1b.aria += " (counted under a related name)";
+      h1b.note = "Counted under the related name \u201c" + ((h1bEntry && h1bEntry.n) || legal) + "\u201d, not under \u201c" + name + "\u201d. " + h1b.note;
+    }
     var staffing = entry && entry.f && entry.f.length
       ? 'The name contains "' + entry.f[0] + '", a weak hint. A W-2 staffing employer can sign an I-983 only if it is enrolled and provides and supervises your training itself.' : "";
     var base = { name: name, key: result.key, records: recordRows(recs, entry && entry.n, date), h1b: h1b, staffing: staffing, dataDate: date, displayName: legal, matchKind: kind };

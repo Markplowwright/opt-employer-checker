@@ -40,6 +40,7 @@
     ".recs{border:1px solid #e0e4ea;border-radius:10px;overflow:hidden}",
     ".rec{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding:9px 11px;border-top:1px solid #e0e4ea}",
     ".rec:first-child{border-top:0}",
+    ".rec[hidden]{display:none}",
     ".rec .a{font-size:13px;font-weight:600;white-space:nowrap}",
     ".tag{flex:none;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px}",
     ".bars{display:flex;align-items:flex-end;gap:8px;height:84px;padding:0 4px;border-bottom:1px solid #d3d8df}",
@@ -154,15 +155,37 @@
     var d = el("div", { style: "display:flex;flex-direction:column;gap:14px" });
     if (v.tone !== "none" && v.tone !== "error") d.appendChild(el("div", { class: "tx", text: v.note }));   // none/error already show it above
     if (v.records.length) {
-      var list = el("div", { class: "recs" });
-      v.records.forEach(function (r) {
+      // Long lists start collapsed: the first two rows (open ones first, newest first), the rest one click away,
+      // so the H-1B section below is never pushed far down the card.
+      var SHOW_FIRST = 2, total = v.records.length;
+      var list = el("div", { class: "recs" }), extra = [];
+      v.records.forEach(function (r, i) {
         var tc = r.tone ? TONES[r.tone] : (r.open ? TONES.ok : TONES.ended);
-        list.appendChild(el("div", { class: "rec" }, [
+        var row = el("div", { class: "rec" }, [
           el("div", null, [el("div", { class: "a", text: "Enrolled " + r.enrolled }), r.meta ? el("div", { class: "sm", text: r.meta }) : null]),
           el("div", { class: "tag", text: r.tag, style: "background:" + tc[0] + ";color:" + tc[1] })
-        ]));
+        ]);
+        if (i >= SHOW_FIRST) { row.hidden = true; extra.push(row); }
+        list.appendChild(row);
       });
-      d.appendChild(section("E-Verify enrollments", v.records.length + " on file", [list]));
+      var parts = [list];
+      if (extra.length) {
+        var more = el("button", { class: "btn", "aria-expanded": "false" });
+        var paint = function (open) {
+          more.setAttribute("aria-expanded", open ? "true" : "false");
+          more.textContent = "";
+          more.appendChild(document.createTextNode(open ? "Show fewer enrollments" : "Show all " + total + " enrollments"));
+          more.appendChild(svg(open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6", 14));
+        };
+        paint(false);
+        more.addEventListener("click", function () {
+          var open = more.getAttribute("aria-expanded") !== "true";
+          extra.forEach(function (row) { row.hidden = !open; });
+          paint(open);
+        });
+        parts.push(more);
+      }
+      d.appendChild(section("E-Verify enrollments", total + " on file", parts));
     }
     if (v.h1b.available) {
       var body = [];
@@ -176,7 +199,7 @@
         body.push(bars, labs);
       }
       body.push(el("div", { class: "sm", text: v.h1b.note }));
-      d.appendChild(section("H-1B petitions approved", "exact name only", body));
+      d.appendChild(section("H-1B petitions approved", v.h1b.scope || "exact name only", body));
     }
     if (v.staffing) d.appendChild(el("div", { class: "stf" }, [el("b", { text: "May be a staffing or consulting firm" }), el("div", { class: "tx", text: v.staffing })]));
     d.appendChild(el("div", { class: "sm", text: "Some E-Verify enrollments cover only federal-contract work." }));

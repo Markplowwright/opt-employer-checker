@@ -47,10 +47,33 @@ test("brand entry is never exact; H-1B on the same key is still reported", async
   assert.equal(r.matchKind, "brand"); assert.ok(r.h1b);
 });
 
-test("US/USA fallback is purple and never carries H-1B", async () => {
+test("US/USA fallback is purple; H-1B comes from the related entry and is marked as such (h1bVia)", async () => {
   const { fetchImpl } = await fakeSite({ "bank of china": { n: "Bank of China", r: [rec()], h: { 2025: [61, 2, 13] } } });
   const r = await createShardClient2({ base: "http://x/", fetchImpl }).lookupName("Bank of China USA");
-  assert.equal(r.matchKind, "us"); assert.equal(r.h1b, null);
+  assert.equal(r.matchKind, "us"); assert.ok(r.h1b); assert.equal(r.h1bVia, "bank of china");
+  assert.equal(r.h1b.h[2025][0], 61);
+});
+
+test("a name's own H-1B data wins over a fallback's (h1bVia stays null)", async () => {
+  const { fetchImpl } = await fakeSite({ "acme usa": { n: "Acme USA", r: [], h: { 2025: [3, 0, 1] } }, acme: { n: "Acme", r: [rec()], h: { 2025: [99, 0, 1] } } });
+  const r = await createShardClient2({ base: "http://x/", fetchImpl }).lookupName("Acme USA");
+  assert.equal(r.matchKind, "us"); assert.equal(r.h1b.h[2025][0], 3); assert.equal(r.h1bVia, null);
+});
+
+test("comma parts: the part with two or more words is tried; single words are not", async () => {
+  const { fetchImpl } = await fakeSite({ "university of pennsylvania health system": { n: "University of Pennsylvania Health System", r: [rec()] }, boston: { n: "Boston", r: [rec()] } });
+  const c = createShardClient2({ base: "http://x/", fetchImpl });
+  const r = await c.lookupName("Penn Medicine, University of Pennsylvania Health System");
+  assert.equal(r.found, true); assert.equal(r.matchKind, "part"); assert.equal(r.key, "university of pennsylvania health system");
+  assert.equal((await c.lookupName("Smith Holdings, Boston")).found, false);
+});
+
+test("candidateKeys: primary, us, brackets, comma parts, in that order, at most 4", async () => {
+  const { candidateKeys } = await import("../lib/shards2.js");
+  assert.deepEqual(candidateKeys("Alpha Beta US").map((k) => k.kind), ["primary", "us"]);
+  const ks = candidateKeys("Alpha Beta (Gamma Delta), Epsilon Zeta, Eta Theta, Iota Kappa");
+  assert.deepEqual(ks.map((k) => k.kind), ["primary", "paren", "paren", "part"]);
+  assert.equal(candidateKeys("Penn Medicine, University of Pennsylvania Health System")[1].kind, "part");
 });
 
 test("parenthetical fallbacks: drop the brackets, then use the text inside", async () => {
