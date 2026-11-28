@@ -89,11 +89,28 @@ jobs:
           print("keys", m["name_keys"], "shard files", n)
           sys.exit(0 if ok else 1)
           PY
+      - name: Build format-2 shards (rule E) into _site/v2
+        working-directory: data-pipeline
+        run: python build_shards_v2.py ../build ../_site/v2 --h1b ../h1b --report ../v2_report.json
+      - name: Safety gate for format 2 (and the old tree must be untouched)
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          old = json.load(open("_site/meta.json"))
+          m = json.load(open("_site/v2/meta.json"))
+          n = len(os.listdir("_site/v2/" + m["shard_path"]))
+          size = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk("_site") for f in fs)
+          print("v2 keys", m["name_keys"], "shard files", n, "| old keys", old["name_keys"], "| site MB", round(size / 1e6))
+          ok = (m.get("format") == 2 and m["name_keys"] >= 1200000 and n == m["shards"] == 4096 and "h1b_full_fy" in m
+                and old.get("format") != 2 and old["name_keys"] >= 900000
+                and size < 600 * 1000 * 1000)       # well under GitHub's 1 GB limit; raise on purpose, not by accident
+          sys.exit(0 if ok else 1)
+          PY
       - name: Add the About page, the speed-test page and the lookup code it uses
         run: |
           cp site/index.html site/speedtest.html site/icon.svg site/favicon-32.png _site/
           mkdir -p _site/lib
-          cp extension/lib/normalize.js extension/lib/shards.js _site/lib/
+          cp extension/lib/normalize.js extension/lib/shards.js extension/lib/normalize2.js extension/lib/shards2.js _site/lib/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
